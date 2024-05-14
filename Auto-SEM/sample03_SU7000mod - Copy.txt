@@ -1,0 +1,67 @@
+﻿# coding: UTF-8
+
+import shutil
+
+from MfKeyMouse import *
+from MfExtCont import *
+from MfCommon import *
+
+
+def Script():
+
+    ## Editable section start ##
+    
+    # parameters
+    ## capture position X/Y , unit is nanometer
+    capturePosition = [[8668400,-6587200],[8531400,-7570400],[8486600,-8422700],[10607300,-6132100],[10634400,-6863800]]
+    MagValue = 750                         
+
+    # HV-ON
+    HvSetting = 'ON'
+    r = EXT.SetHv(OnOff=HvSetting)
+    
+    # Magnification
+    r = EXT.SetMagnification(Value=MagValue)
+
+    # loop start
+    for i in range(len(capturePosition)):
+        
+        # Stage move
+        coord_x = capturePosition[i][0]         # get xcoord from capturePosition list
+        coord_y = capturePosition[i][1]         # get ycoord from capturePosition list
+        r = EXT.RunStageMove(X=coord_x, Y=coord_y)
+
+        # ABCC
+        ABCMode = 1                            # 0:Single, 1:All
+        ABCBm = 0                              # 0:OFF, 1:ON
+        r = EXT.RunAutoAbc(Mode=ABCMode, Bm=ABCBm)
+    
+        # AFC
+        r = EXT.RunAutoAfc()
+    
+        # AST
+        ##r = EXT.RunAutoAsc()
+
+        # Capture
+        CaptureType = 1                        # 0:Single, 1:All
+        r = EXT.RunCapture(Type=CaptureType)
+        ## capture file is D:\SemImage\temp\C_Image.bmp/txt
+
+        # rename capture file(bmp file and txt file)
+        shutil.copyfile(r"D:\SemImage\temp\C_Image.bmp", r"D:\SemImage\temp\C_Image_position" + str(i) + ".bmp")
+        shutil.copyfile(r"D:\SemImage\temp\C_Image.txt", r"D:\SemImage\temp\C_Image_position" + str(i) + ".txt")
+
+        # Run
+        state = 0                              # 0:Run, 1:Freeze, 2:Freeze(forced)
+        r = EXT.RunScan(ScanState = state)
+
+    # loop end
+
+    # HV-OFF
+    HvSetting = 'OFF'
+    r = EXT.SetHv(OnOff=HvSetting)
+
+    ## Editable section end ##
+
+    Exit()
+    return
