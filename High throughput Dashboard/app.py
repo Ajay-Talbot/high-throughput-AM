@@ -225,6 +225,9 @@ app.layout = html.Div([
         html.H1("Melt Pool Predictions", style={'textAlign': 'center'}),
         html.Div([
             html.Button("Perform Predictions", id="perform-predictions-button", style={'background-color': 'green', 'margin-bottom': '10px'}),
+            html.Br(),
+            html.Label("Enter preffered filename for predictions and G-code file:"),
+            dcc.Input(id='filename-input', type='text', value='output_file'),
         ], style={'textAlign': 'center'}),  # This centers the button
         html.Div([
             dash_table.DataTable(
@@ -247,6 +250,8 @@ app.layout = html.Div([
         html.Label("Enter the size of each square:"),
         dcc.Input(id='input-square-size', type='number', placeholder='Square size in mm', value=5),
         html.Br(),
+        html.Label("Enter the number of layers:"),
+        dcc.Input(id='input-num-layers', type='number', placeholder='Number of layers', value=8),
         html.Button('Generate Plot', id='plot-button', n_clicks=0),
         dcc.Graph(id='output-plot'),
         html.Div(id='print-question', children=[
@@ -365,9 +370,10 @@ def update_plot(samples):
     Output("download-predictions", "data"),
     Input("download-predictions-btn", "n_clicks"),
     State("predictions-table", "data"),
+    State("filename-input", "value"),
     prevent_initial_call=True
 )
-def download_predictions_data(n_clicks, data):
+def download_predictions_data(n_clicks, data, filename):
     if n_clicks > 0:
         # Convert data to DataFrame and adjust the format
         df = pd.DataFrame(data)
@@ -389,7 +395,10 @@ def download_predictions_data(n_clicks, data):
         # Select columns in the desired order
         df = df[['idx_lsx', 'hs_opt_ls', 'w_ls', 'p_ls', 'ss_ls', 'rpm_1', 'rpm_2', 't_ls']]
         
-        return dcc.send_data_frame(df.to_csv, "predictions_data.csv")
+        # Use the filename provided by the user
+        csv_filename = f"{filename}.csv"
+        
+        return dcc.send_data_frame(df.to_csv, csv_filename)
     return None
 
 # Set up for file download directory
@@ -563,7 +572,7 @@ def track_gen_horizontal(center, square_size, width, circle_center, circle_radiu
     filename = f"Filled_Hexagon_{name_suffix}.txt"
     return filename, output
 
-def generate_gcode(square_size, spacing, num_squares, circle_diameter, df_Samples):
+def generate_gcode(square_size, spacing, num_squares, circle_diameter, num_layers, df_Samples):
 
     # Use the parameters from df_Samples instead of reading from Optimization.csv
     hs_opt_ls = df_Samples['Hatch Spacing'].tolist()  # Hatch spacing mm
@@ -576,7 +585,6 @@ def generate_gcode(square_size, spacing, num_squares, circle_diameter, df_Sample
     circle_diameter = 50.8  # Diameter in mm
     circle_radius = circle_diameter / 2
 
-    num_layers = 8
     positions = create_square_positions(square_size, spacing, circle_radius)
     all_squares_data = []
     
@@ -724,19 +732,19 @@ def handle_print_response(yes_clicks, no_clicks, spacing, square_size):
 @app.callback(
     Output('download-gcode-link', 'data'),
     Input('generate-code-button', 'n_clicks'),
-    [State('input-spacing-hidden', 'children'), State('input-square-size-hidden', 'children'), State('predictions-table', 'data')],
+    [State('input-spacing-hidden', 'children'), State('input-square-size-hidden', 'children'), State('predictions-table', 'data'), State('filename-input', 'value'), State('input-num-layers', 'value')],
     prevent_initial_call=True
 )
 
-def generate_and_download_code(n_clicks, spacing, square_size, data):
+def generate_and_download_code(n_clicks, spacing, square_size, data, filename,num_layers):
     if n_clicks > 0:
         df_Samples = pd.DataFrame(data)
         num_squares = 100  # Define based on your application needs
         circle_diameter = 50.8 # Example static value
-        full_gcode = generate_gcode(square_size, spacing, num_squares, circle_diameter, df_Samples)
+        full_gcode = generate_gcode(square_size, spacing, num_squares, circle_diameter, num_layers, df_Samples)
         
         # Save the G-code to a file on the server
-        file_path = os.path.join(SAVE_DIR, "generated_gcode.gcode")
+        file_path = os.path.join(SAVE_DIR, f"{filename}.gcode")
         with open(file_path, "w") as file:
             file.write(full_gcode)
         
