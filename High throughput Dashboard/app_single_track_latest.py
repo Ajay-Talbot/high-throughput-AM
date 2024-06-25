@@ -484,8 +484,8 @@ def track_gen(Testing_Mode, camera, Powers, Scan_Speeds, Distance, Num_Tracks, l
     cap_time = 2.0
     output_dir = r"C:\Users\madva\Desktop\Code base".format(img_save_dir)
 
-    gcode_Laser_On = "M201 (EMON)"
-    gcode_Laser_Off = "M201 (EMOFF)"
+    #gcode_Laser_On = "M201 (EMON)"
+    #gcode_Laser_Off = "M201 (EMOFF)"
     gcode_Laser_Off_Power = "M201 (SDC 0)"
     gcode_Aimingbeam_On = "M201 (ABN)"
     gcode_Aimingbeam_Off = "M201 (ABF)"
@@ -496,8 +496,8 @@ def track_gen(Testing_Mode, camera, Powers, Scan_Speeds, Distance, Num_Tracks, l
 
     output = []
     
-    output.append("; gcode_Laser_On: " + gcode_Laser_On + "\n")
-    output.append("; gcode_Laser_Off: " + gcode_Laser_Off_Power + "\n")
+    #output.append("; gcode_Laser_On: " + gcode_Laser_On + "\n")
+    #output.append("; gcode_Laser_Off: " + gcode_Laser_Off_Power + "\n")
     output.append("; gcode_Laser_Off_Power: " + gcode_Laser_Off_Power + "\n")
     output.append("; gcode_Laser_On_Power: " + laser_power_set('power_value') + "\n")
     output.append("; gcode_Aimingbeam_On: " + gcode_Aimingbeam_On + "\n")
@@ -542,7 +542,7 @@ def track_gen(Testing_Mode, camera, Powers, Scan_Speeds, Distance, Num_Tracks, l
         pos_x += track_length
         track_number += 1
 
-    output.append("\n" + gcode_Laser_Off + " ; Laser_Off\n")
+    #output.append("\n" + gcode_Laser_Off + " ; Laser_Off\n")
     output.append("M65 P3" + " ; Stops Argon purge gas\n")
     output.append("G1 Z25 F3000 ; Rise printing nozzle\n")
     
@@ -603,28 +603,25 @@ def generate_gcode(substrate_width, substrate_height, track_length, track_spacin
     track_number = 1
 
     for i, (pos_x, pos_y) in enumerate(track_positions):
-        track_data = []
-
         if rpm_1[i] != last_rpm_1 or rpm_2[i] != last_rpm_2:
-            track_data.append("\nM205 (H_0_V_{0}) ; Feed rate for hopper 1\n".format(rpm_1[i]))
-            track_data.append("\nM205 (H_1_V_2.0) ; Argon carrier gas flow rate hopper 1")
-            track_data.append("\nM205 (H_2_V_{0}) ; Feed rate for hopper 2\n".format(rpm_2[i]))
-            track_data.append("\nM205 (H_3_V_2.0) ; Argon carrier gas flow rate hopper 2")
-            track_data.append("\nG4 P60" + ";Powder stabilization")
+            all_tracks_data.append(f"\nM205 (H_0_V_{rpm_1[i]}) ; Feed rate for hopper 1")
+            all_tracks_data.append("\nM205 (H_1_V_2.0) ; Argon carrier gas flow rate hopper 1")
+            all_tracks_data.append(f"\nM205 (H_2_V_{rpm_2[i]}) ; Feed rate for hopper 2")
+            all_tracks_data.append("\nM205 (H_3_V_2.0) ; Argon carrier gas flow rate hopper 2")
+            all_tracks_data.append("\nG4 P30 ; Powder stabilization")
 
         last_rpm_1 = rpm_1[i]
         last_rpm_2 = rpm_2[i]
 
+        # Generate track-specific G-code
         Powers = [p_ls[i]]
         Scan_Speeds = [ss_ls[i] / 60]
         layer_height = w_ls[i] * t_ls[i] if t_ls[i] > 0 else 0
         fumetime = 1
         img_save_dir = '20230910'
-        name_suffix = 'rpm{0}_{1}_hs{2}'.format(rpm_1[i], idx_ls[i], hs_opt_ls[i])
+        name_suffix = f'rpm{rpm_1[i]}_{idx_ls[i]}_hs{hs_opt_ls[i]}'
 
-        _, output = track_gen(Testing_Mode, camera, Powers, Scan_Speeds, track_length, 1, layer_height, 0, fumetime, img_save_dir, name_suffix, pos_x, pos_y, track_length, rpm_1, rpm_2, track_number)
-        output.append("\n" + 'M201 (SDC 0)' + " ; Set Laser power to 0%\n")
-
+        _, output = track_gen(Testing_Mode, camera, Powers, Scan_Speeds, track_length, 1, layer_height, 0, fumetime, img_save_dir, name_suffix, pos_x, pos_y, track_length, rpm_1[i], rpm_2[i], track_number)
         all_tracks_data.extend(output)
 
         track_number += 1
