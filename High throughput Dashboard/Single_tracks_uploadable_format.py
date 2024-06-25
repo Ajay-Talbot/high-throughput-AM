@@ -158,6 +158,7 @@ def track_gen(Testing_Mode, camera, Powers, Scan_Speeds, Distance, Num_Tracks, l
     cam_stb_time = 1.0
     cap_time = 2.0
     output_dir = r"C:\Users\madva\Desktop\Code base".format(img_save_dir)
+    layer_height = 0
 
     #gcode_Laser_On = "M201 (EMON)"
     #gcode_Laser_Off = "M201 (EMOFF)"
@@ -246,31 +247,32 @@ def generate_gcode(df, substrate_width, substrate_height, track_length, track_sp
     Testing_Mode = 0
     camera = 0
 
-    hs_opt_ls = [item for sublist in df.iloc[:,[2]].values.tolist() for item in sublist] #hatch spacing mm #######
-    w_ls = [item for sublist in df.iloc[:,[3]].values.tolist() for item in sublist] #width of each track##########
-    p_ls = [item for sublist in df.iloc[:,[4]].values.tolist() for item in sublist] #percentage of max power
-    ss_ls = [item for sublist in df.iloc[:,[5]].values.tolist() for item in sublist] #scanning speed 
+    # Extract values from the DataFrame
+    hs_opt_ls = [item for sublist in df.iloc[:,[2]].values.tolist() for item in sublist]
+    w_ls = [item for sublist in df.iloc[:,[3]].values.tolist() for item in sublist]
+    p_ls = [item for sublist in df.iloc[:,[4]].values.tolist() for item in sublist]
+    ss_ls = [item for sublist in df.iloc[:,[5]].values.tolist() for item in sublist]
     rpm_1 = [item for sublist in df.iloc[:,[6]].values.tolist() for item in sublist]
     rpm_2 = [item for sublist in df.iloc[:,[7]].values.tolist() for item in sublist]
-    idx_ls = [item for sublist in df.iloc[:,[1]].values.tolist() for item in sublist]# random index for each track
+    idx_ls = [item for sublist in df.iloc[:,[1]].values.tolist() for item in sublist]
     t_ls = [item for sublist in df.iloc[:,[8]].values.tolist() for item in sublist]
 
     all_tracks_data = []
 
-    all_tracks_data.append("\nG90 G54 G64 G50 G17 G40 G80 G94 G91.1 G49" + " ; From .nc file that worked on CNC")
+    # G-code initialization for the start of the printing process
+    all_tracks_data.append("\nG90 G54 G64 G50 G17 G40 G80 G94 G91.1 G49")
     all_tracks_data.append("\nG1 Z15 F2000 ; Lift the print head up before printing")
-    all_tracks_data.append("\nG90" + " ; absolute coordinates")
-    all_tracks_data.append("\nG21" + " ; set units to millimeters")
-    all_tracks_data.append("\nT11 G43 H11 M6" + " ; set tool as T11, give it the offset of (T99-4.08mm), perform tool change.")
-    all_tracks_data.append("\nG1 Z5 F5000 ;move nozzle up 5mm")
+    all_tracks_data.append("\nG90 ; absolute coordinates")
+    all_tracks_data.append("\nG21 ; set units to millimeters")
+    all_tracks_data.append("\nT11 G43 H11 M6 ; set tool as T11, perform tool change.")
+    all_tracks_data.append("\nG1 Z5 F5000 ; move nozzle up 5mm")
     all_tracks_data.append("\nM64 P2 ; Starts fume extractor")
     all_tracks_data.append("\nM64 P3 ; Starts argon purge gas")
-    all_tracks_data.append("\nG4 P0.001;Added because G1 being skipped")
-    all_tracks_data.append("\nM201 (EMON) ; Turn laser On")
-    all_tracks_data.append("\nM201 (SDC 0) ; Set Laser power to 0%")
+    all_tracks_data.append("\nG4 P0.001 ; Added because G1 being skipped")
 
-    last_rpm_1 = None
-    last_rpm_2 = None
+    # Initial RPM values to trigger the first RPM update
+    last_rpm_1 = -1
+    last_rpm_2 = -1
 
     # Calculate track positions
     track_positions = calculate_track_positions(substrate_width, substrate_height, num_tracks, track_length, track_spacing)
@@ -278,29 +280,25 @@ def generate_gcode(df, substrate_width, substrate_height, track_length, track_sp
     track_number = 1
 
     for i, (pos_x, pos_y) in enumerate(track_positions):
-        track_data = []
-
         if rpm_1[i] != last_rpm_1 or rpm_2[i] != last_rpm_2:
-            track_data.append("\nM205 (H_0_V_{0}) ; Feed rate for hopper 1\n".format(rpm_1[i]))
-            track_data.append("\nM205 (H_1_V_2.0) ; Argon carrier gas flow rate hopper 1")
-            track_data.append("\nM205 (H_2_V_{0}) ; Feed rate for hopper 2\n".format(rpm_2[i]))
-            track_data.append("\nM205 (H_3_V_2.0) ; Argon carrier gas flow rate hopper 2")
-            track_data.append("\nG4 P60" + ";Powder stabilization")
+            all_tracks_data.append(f"\nM205 (H_0_V_{rpm_1[i]}) ; Feed rate for hopper 1")
+            all_tracks_data.append("\nM205 (H_1_V_2.0) ; Argon carrier gas flow rate hopper 1")
+            all_tracks_data.append(f"\nM205 (H_2_V_{rpm_2[i]}) ; Feed rate for hopper 2")
+            all_tracks_data.append("\nM205 (H_3_V_2.0) ; Argon carrier gas flow rate hopper 2")
+            all_tracks_data.append("\nG4 P30 ; Powder stabilization")
 
         last_rpm_1 = rpm_1[i]
         last_rpm_2 = rpm_2[i]
 
+        # Generate track-specific G-code
         Powers = [p_ls[i]]
         Scan_Speeds = [ss_ls[i] / 60]
         layer_height = w_ls[i] * t_ls[i] if t_ls[i] > 0 else 0
         fumetime = 1
         img_save_dir = '20230910'
-        name_suffix = 'rpm{0}_{1}_hs{2}'.format(rpm_1[i], idx_ls[i], hs_opt_ls[i])
+        name_suffix = f'rpm{rpm_1[i]}_{idx_ls[i]}_hs{hs_opt_ls[i]}'
 
-        # Ensure the correct position and length are used
         _, output = track_gen(Testing_Mode, camera, Powers, Scan_Speeds, track_length, 1, layer_height, 0, fumetime, img_save_dir, name_suffix, pos_x, pos_y, track_length, rpm_1[i], rpm_2[i], track_number)
-        output.append("\n" + 'M201 (SDC 0)' + " ; Set Laser power to 0%\n")
-
         all_tracks_data.extend(output)
 
         track_number += 1
