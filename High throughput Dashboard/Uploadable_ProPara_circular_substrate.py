@@ -69,13 +69,22 @@ def create_square_positions(square_size, spacing, circle_radius):
     positions = []
     step = square_size + spacing
     fit_diameter = int((2 * circle_radius) // step)
-    initial_offset = (2 * circle_radius - fit_diameter * step + spacing) / 2
-    
-    for i in range(fit_diameter):
-        for j in range(fit_diameter):
-            x = -circle_radius + initial_offset + i * step
-            y = -circle_radius + initial_offset + j * step
-            if all(math.sqrt((cx**2 + cy**2)) <= circle_radius for cx, cy in [(x + square_size/2, y + square_size/2), (x - square_size/2, y + square_size/2), (x - square_size/2, y - square_size/2), (x + square_size/2, y - square_size/2)]):
+    num_squares_per_row = fit_diameter if fit_diameter % 2 == 1 else fit_diameter - 1
+
+    # Calculate the offset to center the grid around (0, 0)
+    offset_x = -(num_squares_per_row // 2) * step
+    offset_y = -(num_squares_per_row // 2) * step
+
+    for i in range(num_squares_per_row):
+        for j in range(num_squares_per_row):
+            x = offset_x + i * step
+            y = offset_y + j * step
+            if all(math.sqrt((cx)**2 + (cy)**2) <= circle_radius for cx, cy in [
+                (x + square_size / 2, y + square_size / 2),
+                (x - square_size / 2, y + square_size / 2),
+                (x - square_size / 2, y - square_size / 2),
+                (x + square_size / 2, y - square_size / 2)
+            ]):
                 positions.append((x, y))
     return positions
 
