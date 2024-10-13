@@ -26,19 +26,19 @@ app.config.suppress_callback_exceptions = True
 app.layout = html.Div([
     html.H1("Single Tracks on Rectangular Substrate"),
     html.Label("Enter the width of the substrate (mm):"),
-    dcc.Input(id='input-substrate-width', type='number', placeholder='Width in mm', value=100),
+    dcc.Input(id='input-substrate-width', type='number', placeholder='Width in mm', value=65),
     html.Br(),
     html.Label("Enter the height of the substrate (mm):"),
-    dcc.Input(id='input-substrate-height', type='number', placeholder='Height in mm', value=50),
+    dcc.Input(id='input-substrate-height', type='number', placeholder='Height in mm', value=45),
     html.Br(),
     html.Label("Enter the length of the tracks (mm):"),
-    dcc.Input(id='input-track-length', type='number', placeholder='Track length in mm', value=40),
+    dcc.Input(id='input-track-length', type='number', placeholder='Track length in mm', value=10),
     html.Br(),
     html.Label("Enter the number of tracks:"),
-    dcc.Input(id='input-num-tracks', type='number', placeholder='Number of tracks', value=10),
+    dcc.Input(id='input-num-tracks', type='number', placeholder='Number of tracks', value=90),
     html.Br(),
     html.Label("Enter the spacing between tracks (mm):"),
-    dcc.Input(id='input-track-spacing', type='number', placeholder='Spacing in mm', value=10),
+    dcc.Input(id='input-track-spacing', type='number', placeholder='Spacing in mm', value=3),
     html.Br(),
     dcc.Upload(
         id='upload-data',
@@ -101,14 +101,18 @@ def calculate_track_positions(length, width, num_tracks, track_length, track_spa
     current_y = edge_offset
     track_count = 0
 
+    # Ensure the track positions do not exceed the substrate width and height
     while track_count < num_tracks:
-        if current_x + track_spacing > width - edge_offset:  # Check if the track fits in the current line
+        # Check if the track fits in the current line, considering the substrate width
+        if current_x + track_spacing > width - edge_offset:
             current_x = edge_offset  # Reset to the start of the line
             current_y += track_length + 2  # Move to the next line with 2mm gap
 
-        if current_y + track_length > length - edge_offset:  # Stop if it exceeds the length of the substrate
+        # Check if adding another track would exceed the substrate height
+        if current_y + track_length > length - edge_offset:
             break
 
+        # Add the track position
         track_positions.append((current_x, current_y))
         current_x += track_spacing
         track_count += 1
@@ -155,13 +159,13 @@ def track_gen(Testing_Mode, camera, Powers, Scan_Speeds, Distance, Num_Tracks, l
     cam_offset_y = 28.5
     num_imgs = str(3)
     camid = str(1)
-    cam_stb_time = 1.0
+    cam_stb_time = 3.0
     cap_time = 2.0
     output_dir = r"C:\Users\madva\Desktop\Code base".format(img_save_dir)
     layer_height = 0
 
-    #gcode_Laser_On = "M201 (EMON)"
-    #gcode_Laser_Off = "M201 (EMOFF)"
+    gcode_Laser_On = "M201 (EMON)"
+    gcode_Laser_Off = "M201 (EMOFF)"
     gcode_Laser_Off_Power = "M201 (SDC 0)"
     gcode_Aimingbeam_On = "M201 (ABN)"
     gcode_Aimingbeam_Off = "M201 (ABF)"
@@ -172,8 +176,8 @@ def track_gen(Testing_Mode, camera, Powers, Scan_Speeds, Distance, Num_Tracks, l
 
     output = []
     
-    #output.append("; gcode_Laser_On: " + gcode_Laser_On + "\n")
-    #output.append("; gcode_Laser_Off: " + gcode_Laser_Off_Power + "\n")
+    output.append("; gcode_Laser_On: " + gcode_Laser_On + "\n")
+    output.append("; gcode_Laser_Off: " + gcode_Laser_Off_Power + "\n")
     output.append("; gcode_Laser_Off_Power: " + gcode_Laser_Off_Power + "\n")
     output.append("; gcode_Laser_On_Power: " + laser_power_set('power_value') + "\n")
     output.append("; gcode_Aimingbeam_On: " + gcode_Aimingbeam_On + "\n")
@@ -219,7 +223,6 @@ def track_gen(Testing_Mode, camera, Powers, Scan_Speeds, Distance, Num_Tracks, l
         track_number += 1
 
     #output.append("\n" + gcode_Laser_Off + " ; Laser_Off\n")
-    output.append("M65 P3" + " ; Stops Argon purge gas\n")
     output.append("G1 Z25 F3000 ; Rise printing nozzle\n")
     
     if Testing_Mode:
@@ -269,17 +272,21 @@ def generate_gcode(df, substrate_width, substrate_height, track_length, track_sp
     all_tracks_data.append("\nM64 P2 ; Starts fume extractor")
     all_tracks_data.append("\nM64 P3 ; Starts argon purge gas")
     all_tracks_data.append("\nG4 P0.001 ; Added because G1 being skipped")
+    #turn on laser POWER
+    all_tracks_data.append("\nM201 (EMON) ; Turn on the laser")   
+
 
     # Initial RPM values to trigger the first RPM update
     last_rpm_1 = -1
     last_rpm_2 = -1
 
-    # Calculate track positions
-    track_positions = calculate_track_positions(substrate_width, substrate_height, num_tracks, track_length, track_spacing)
+    # Calculate track positions considering substrate width and height
+    track_positions = calculate_track_positions(substrate_height, substrate_width, num_tracks, track_length, track_spacing)
 
     track_number = 1
 
     for i, (pos_x, pos_y) in enumerate(track_positions):
+        
         if rpm_1[i] != last_rpm_1 or rpm_2[i] != last_rpm_2:
             all_tracks_data.append(f"\nM205 (H_0_V_{rpm_1[i]}) ; Feed rate for hopper 1")
             all_tracks_data.append("\nM205 (H_1_V_2.0) ; Argon carrier gas flow rate hopper 1")
@@ -294,7 +301,7 @@ def generate_gcode(df, substrate_width, substrate_height, track_length, track_sp
         Powers = [p_ls[i]]
         Scan_Speeds = [ss_ls[i] / 60]
         layer_height = w_ls[i] * t_ls[i] if t_ls[i] > 0 else 0
-        fumetime = 1
+        fumetime = 5
         img_save_dir = '20230910'
         name_suffix = f'rpm{rpm_1[i]}_{idx_ls[i]}_hs{hs_opt_ls[i]}'
 
@@ -302,6 +309,16 @@ def generate_gcode(df, substrate_width, substrate_height, track_length, track_sp
         all_tracks_data.extend(output)
 
         track_number += 1
+        if track_number == num_tracks+1:
+            all_tracks_data.append("\nM201 (EMOFF) ; Turn off the laser")
+            all_tracks_data.append("\nM65 P3" + " ; Stops Argon purge gas\n")
+            all_tracks_data.append("\nM65 P2" + " ; Stops fume extractor\n")
+            #turn off hoppers
+            all_tracks_data.append("\nM205 (H_0_V_0) ; Turn off hopper 1")
+            all_tracks_data.append("\nM205 (H_1_V_0) ; Turn off hopper 1 carrier gas")
+            all_tracks_data.append("\nM205 (H_2_V_0) ; Turn off hopper 2")
+            all_tracks_data.append("\nM205 (H_3_V_0) ; Turn off hopper 2 carrier gas")
+
 
     return "".join(all_tracks_data)
 
