@@ -9,7 +9,7 @@ global_spacing = None
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))  # Set the working directory
 
-df_opt = pd.read_csv('Optimization.csv')
+df_opt = pd.read_csv('DOE_SS316.csv')
 
 hs_opt_ls = [item for sublist in df_opt.iloc[:,[2]].values.tolist() for item in sublist] #hatch spacing mm #######
 w_ls = [item for sublist in df_opt.iloc[:,[3]].values.tolist() for item in sublist] #width of each track##########
@@ -20,7 +20,11 @@ rpm_2 = [item for sublist in df_opt.iloc[:,[7]].values.tolist() for item in subl
 idx_ls = [item for sublist in df_opt.iloc[:,[1]].values.tolist() for item in sublist]# random index for each track
 t_ls = [item for sublist in df_opt.iloc[:,[8]].values.tolist() for item in sublist]
 
-circle_diameter = 50.8  # Diameter in mm
+print("Loaded RPM values from CSV:")
+for i in range(len(rpm_1)):
+    print(f"Square {i+1} - RPM 1: {rpm_1[i]}, RPM 2: {rpm_2[i]}")
+
+circle_diameter = 56  # Diameter in mm
 circle_radius = circle_diameter / 2
 
 def create_square(center, size):
@@ -264,7 +268,7 @@ def plot_squares(spacing, square_size):
 
 if __name__ == '__main__':
 
-    circle_diameter = 53  # Diameter in mm
+    circle_diameter = 56  # Diameter in mm
     circle_radius = circle_diameter / 2
     
     num_squares = int(input("How many squares do you want to print? "))
@@ -278,38 +282,58 @@ if __name__ == '__main__':
         print("G-code generation cancelled.")
         exit()  # Exit the program if the user does not confirm
 
-    num_layers = 8
+    target_height = 5.0  # Target height in mm
+    
     positions = create_square_positions(square_size, global_spacing, num_squares, circle_radius)
     
     all_squares_data = []
 
-    # Add initial G-code commands
-    all_squares_data.append("\nG90 G54 G64 G50 G17 G40 G80 G94 G91.1 G49" + " ; From .nc file that worked on CNC")
+    # Add Argon Gas Flow Rate at the start (single, stable command)
+    argon_flow_rate = 3.0  # example flow rate in L/min
+    all_squares_data.append("\nG90 G54 G64 G50 G17 G40 G80 G94 G91.1 G49 ; From .nc file that worked on CNC")
     all_squares_data.append("\nG1 Z50 F2000 ; Lift the print head up before printing")
-    all_squares_data.append("\nG90" + " ; absolute coordinates")
-    all_squares_data.append("\nG21" + " ; set units to millimeters")
-    all_squares_data.append("\nT11 G43 H11 M6" + " ; set tool as T11, give it the offset of (T99-4.08mm), perform ..."
-                                                   " tool change.")
-    all_squares_data.append("\nG1 Z5 F5000 ;move nozzle up 5mm")
-    all_squares_data.append("\nM64 P2 ; Starts fume extractor")
-    all_squares_data.append("\nM64 P3 ; Starts argon purge gas")
-    all_squares_data.append("\nG4 P0.001;Added because G1 being skipped")
-    all_squares_data.append("\nM201 (EMON) ; Turn laser On")
-    all_squares_data.append("\nM201 (SDC 0) ; Set Laser power to 0%")
+    all_squares_data.append("\nG90 ; Absolute coordinates")
+    all_squares_data.append("\nG21 ; Set units to millimeters")
+    all_squares_data.append("\nT11 G43 H11 M6 ; Set tool as T11, give it the offset, perform tool change.")
+    all_squares_data.append("\nG1 Z5 F5000 ; Move nozzle up 5mm")
+    all_squares_data.append("\nM64 P2 ; Start fume extractor")
+    all_squares_data.append("\nM64 P3 ; Start argon purge gas")
+    all_squares_data.append("\nG4 P0.001 ; Added because G1 being skipped")
+    all_squares_data.append("\nM201 (EMON) ; Turn laser on")
+    all_squares_data.append("\nM201 (SDC 0) ; Set laser power to 0%")
+    '''all_squares_data.append(f"\nM205 (H_1_V_{argon_flow_rate}) ; Argon carrier gas flow rate hopper 1")
+    all_squares_data.append(f"\nM205 (H_3_V_{argon_flow_rate}) ; Argon carrier gas flow rate hopper 2")'''
 
-    for i, (pos_x, pos_y) in enumerate(positions):   
+    # Initialize variables to keep track of the last RPM values for comparison
+    last_rpm_1 = None
+    last_rpm_2 = None
+
+    # Loop through each square position
+    for i, (pos_x, pos_y) in enumerate(positions):
         w = w_ls[i]
         p = p_ls[i]
         ss = ss_ls[i] / 60  # Convert to required units if necessary
         rpm1 = rpm_1[i]
-        rpm2 = rpm_2[i] 
+        rpm2 = rpm_2[i]
         t = t_ls[i]
-        hs_opt = hs_opt_ls[i] 
+        hs_opt = hs_opt_ls[i]
 
-        if i > 0:
-            all_squares_data.append("\nG1 Z20 F2000 ; Lift the nozzle before moving to the next square")
-            all_squares_data.append(f"\nG0 X{pos_x:.3f} Y{pos_y:.3f} ; Move to the next square's position")
-            all_squares_data.append("\nG1 Z20 F2000 ; Lower the nozzle to start printing")
+        num_layers = int(target_height / t)  # Calculate the number of layers based on target height and layer thickness
+        print(f"Cube {i+1}: Layer height = {t} mm, Number of layers = {num_layers}")
+        
+        all_squares_data.append("\nG1 Z20 F2000 ; Lift the nozzle before moving to the next square")
+        all_squares_data.append(f"\nM205 (H_0_V_{rpm1}) ; Feed rate for hopper 1")
+        all_squares_data.append(f"\nM205 (H_1_V_{argon_flow_rate}) ; Argon carrier gas flow rate hopper 1")
+        all_squares_data.append(f"\nM205 (H_2_V_{rpm2}) ; Feed rate for hopper 2")
+        all_squares_data.append(f"\nM205 (H_3_V_{argon_flow_rate}) ; Argon carrier gas flow rate hopper 2")
+        last_rpm_1 = rpm1  # Update last RPM values
+        last_rpm_2 = rpm2
+        all_squares_data.append(f"\nG0 X{pos_x:.3f} Y{pos_y:.3f} ; Move to the next square's position")
+        all_squares_data.append("\nG1 Z20 F2000 ; Lower the nozzle to start printing")
+        all_squares_data.append(f"\nG4 P30 ; Time to wait for powder to settle\n")
+
+        # Update powder RPM and argon gas flow rate at the start of each square
+           
 
         # Generate G-code for printing the square
         Speed_NotPrinting = 1560 * 2.5
@@ -318,35 +342,41 @@ if __name__ == '__main__':
         previous_end_y = None
 
         layer_data.append("\n;========= Starting square {0} ==========\n".format(i + 1))
-       
-        if df_opt.iloc[i, 4] == 0 or abs(max(positions[0]))>= circle_diameter: # Skip if power is zero
+    
+        if df_opt.iloc[i, 4] == 0 or abs(max(positions[0])) >= circle_diameter:  # Skip if power is zero
             continue
         
         for layer in range(num_layers):
             name_suffix = f"square_{i}_layer_{layer}"
-    
-            if layer%2 == 0:
+
+            if layer == 0:
+                # Add lift command and set RPM if necessary
+                layer_data.append("\nG1 Z20 F2000 ; Lift the print head up before printing")
+                
+
+            if layer % 2 == 0:
                 filename_v, output_v = track_gen_vertical((pos_x, pos_y), square_size, w, (0, 0), circle_radius, hs_opt, layer * t, p, ss, 2, name_suffix, None, None)
                 if filename_v:
                     layer_data.extend(output_v)
                     layer_data.append('\n;========= Vertical tracks for Layer {0} finished ==========\n'.format(layer))
-                    layer_data.append("\nG4 P10" + ";Interpass Cooldown\n")
+                    layer_data.append("\nG4 P10 ; Interpass Cooldown\n")
             else:
                 # Generate horizontal tracks for each layer
                 filename_h, output_h = track_gen_horizontal((pos_x, pos_y), square_size, w, (0, 0), circle_radius, hs_opt, layer * t, p, ss, 2, name_suffix, None, None)
                 if filename_h:
                     layer_data.extend(output_h)
                     layer_data.append('\n;========= Horizontal tracks for Layer {0} finished ==========\n'.format(layer))
-                    layer_data.append("\nG4 P10" + ";Interpass Cooldown\n")
+                    layer_data.append("\nG4 P10 ; Interpass Cooldown\n")
                     
         all_squares_data.extend(layer_data)
 
         all_squares_data.append('\n;========= End of Square {0} ==========\n'.format(i + 1))
+        #add 30 seconds wait time for powder to settle
+        
+    
 
     # Write the G-code to a file
     with open('verhor.gcode', 'w') as f:
         for layer_data in all_squares_data:
             for line in layer_data:
                 f.write(line)
-
- 
