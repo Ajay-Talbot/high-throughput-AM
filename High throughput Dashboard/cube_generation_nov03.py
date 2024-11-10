@@ -332,9 +332,6 @@ if __name__ == '__main__':
         all_squares_data.append("\nG1 Z20 F2000 ; Lower the nozzle to start printing")
         all_squares_data.append(f"\nG4 P30 ; Time to wait for powder to settle\n")
 
-        # Update powder RPM and argon gas flow rate at the start of each square
-           
-
         # Generate G-code for printing the square
         Speed_NotPrinting = 1560 * 2.5
         layer_data = []
@@ -353,32 +350,30 @@ if __name__ == '__main__':
                 # Add lift command and set RPM if necessary
                 layer_data.append("\nG1 Z20 F2000 ; Lift the print head up before printing")
                 
-
             if layer % 2 == 0:
                 filename_v, output_v = track_gen_vertical((pos_x, pos_y), square_size, w, (0, 0), circle_radius, hs_opt, layer * t, p, ss, 2, name_suffix, None, None)
                 if filename_v:
                     layer_data.extend(output_v)
                     layer_data.append('\n;========= Vertical tracks for Layer {0} finished ==========\n'.format(layer))
-                    layer_data.append("\nG4 P10 ; Interpass Cooldown\n")
             else:
-                # Generate horizontal tracks for each layer
                 filename_h, output_h = track_gen_horizontal((pos_x, pos_y), square_size, w, (0, 0), circle_radius, hs_opt, layer * t, p, ss, 2, name_suffix, None, None)
                 if filename_h:
                     layer_data.extend(output_h)
                     layer_data.append('\n;========= Horizontal tracks for Layer {0} finished ==========\n'.format(layer))
-                    layer_data.append("\nG4 P10 ; Interpass Cooldown\n")
-                    
+            
+            # Check if it's the last layer of the last square
+            if i == len(positions) - 1 and layer == num_layers - 1:
+                layer_data.append("\nM201 (EMOFF) ; Turn laser power off")
+
+            # Add interpass cooldown
+            layer_data.append("\nG4 P10 ; Interpass Cooldown\n")
+
         all_squares_data.extend(layer_data)
-
         all_squares_data.append('\n;========= End of Square {0} ==========\n'.format(i + 1))
-        #add 30 seconds wait time for powder to settle
+        # Add 30 seconds wait time for powder to settle  
         
-    
-
     # Write the G-code to a file
     with open('verhor.gcode', 'w') as f:
         for layer_data in all_squares_data:
             for line in layer_data:
                 f.write(line)
-
- 
