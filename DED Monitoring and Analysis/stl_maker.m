@@ -3,20 +3,20 @@ clear all
 clc
 
 % Load CSV file and process data
-file_name = '04RPM_1_15.csv';
+file_name = '06RPM_16_30.csv';
 data = csvread(file_name);
 start = 1;
 finish = 3;
 data = data(start:end-finish, start:end-finish);
 
 % Downsample to reduce file size
-downsample_factor = 8; % downsampling for smaller STL sizes
+downsample_factor = 6; % downsampling for smaller STL sizes I reccomend 4-6
 data = data(1:downsample_factor:end, 1:downsample_factor:end);
 
 % Define Field of View for Stitched Image in mm
 [m, n] = size(data);
-l_x = 12.974; % mm, Horizontal field of view for the full stitched area
-l_y = 45.093; % mm, Vertical field of view for the full stitched area
+l_x = 12.85352; % mm, Horizontal field of view for the full stitched area
+l_y = 44.51461; % mm, Vertical field of view for the full stitched area
 
 % Generate X and Y coordinates scaled to the real-world stitched field of view
 x_pts = linspace(0, l_x, n);
