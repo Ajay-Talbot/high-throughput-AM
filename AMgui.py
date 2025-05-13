@@ -13,14 +13,17 @@ from PyQt6.QtWidgets import (
     QScrollArea,
     QScrollBar,
     QMainWindow,
-    QSlider
+    QSlider,
 )
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon, QDragEnterEvent, QDropEvent, QMouseEvent, QGuiApplication
 import sys
 from pathlib import Path
 import matplotlib.pyplot as plt
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas, NavigationToolbar2QT as NavigationToolbar
+from matplotlib.backends.backend_qt5agg import (
+    FigureCanvasQTAgg as FigureCanvas,
+    NavigationToolbar2QT as NavigationToolbar,
+)
 from matplotlib.figure import Figure
 import matplotlib.patches as patches
 import math
@@ -47,14 +50,16 @@ class AMGcodeCalculator(QWidget):
 
         self.safe_height = 25
         self.not_print_speed = 1560 * 2.5
-        self.mscode = {"gcode_laser_on" : "M201 (EMON)",
-        "gcode_laser_off" : "M201 (EMOFF)",
-        "gcode_laser_power" : lambda x: f"M201 (SDC {x})",
-        "gcode_aimingbeam_on" : "M201 (ABN)",
-        "gcode_aimingbeam_off" : "M201 (ABF)",}
+        self.mscode = {
+            "gcode_laser_on": "M201 (EMON)",
+            "gcode_laser_off": "M201 (EMOFF)",
+            "gcode_laser_power": lambda x: f"M201 (SDC {x})",
+            "gcode_aimingbeam_on": "M201 (ABN)",
+            "gcode_aimingbeam_off": "M201 (ABF)",
+        }
 
         self.main_layout = QGridLayout(self)
-        self.main_layout.setContentsMargins(10, 10, 10, 10)
+        self.main_layout.setContentsMargins(30, 10, 30, 10)
         self.main_layout.setSpacing(3)
         self.main_layout.setColumnMinimumWidth(1, 500)
         self.main_layout.setColumnStretch(0, 1)
@@ -117,7 +122,7 @@ class AMGcodeCalculator(QWidget):
 
         calculate = QPushButton("Calculate configuration")
         calculate.setFixedWidth(150)
-        calculate.clicked.connect(self.plot)
+        calculate.clicked.connect(self.calculate_positions)
         wrap_buttons.addWidget(calculate)
 
         generate = QPushButton("Generate GCode")
@@ -129,36 +134,35 @@ class AMGcodeCalculator(QWidget):
 
         self.figure = Figure()
         self.canvas = FigureCanvas(self.figure)
-        self.canvas.setMinimumSize(300, 300)
+        self.canvas.setMinimumSize(400, 400)
 
         self.canvas.mpl_connect("button_press_event", self.on_click)
 
         self.ax = self.figure.add_subplot(111)
-
         self.ax.grid(
             True, which="both", color="gray", linestyle="--", linewidth=0.5, alpha=0.5
         )
-        self.ax.set_title("Printing Configuration", fontsize=10)
+        self.ax.set_title("Printing Configuration", fontsize=10, pad=10)
         self.ax.set_xlabel("X Axis (mm)", fontsize=8)
         self.ax.set_ylabel("Y Axis (mm)", fontsize=8)
         self.ax.tick_params(labelsize=8)
-        self.ax.set_xticks(range(0, 30, 5))
-        self.ax.set_yticks(range(0, 30, 5))
         self.ax.set_aspect("equal")
-        self.figure.subplots_adjust(bottom=0.2, left=0.2)
+        # self.figure.subplots_adjust(bottom=0.2, left=0.2)
         self.canvas.draw()
 
         self.main_layout.addWidget(self.canvas, 0, 1, 2, 1)
 
         self.display = QLabel()
-        self.display.setStyleSheet("QLabel {font-size: 12px; background-color: #C9CAC9}")
-        self.display.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+        self.display.setStyleSheet(
+            "QLabel {font-size: 12px; background-color: #C9CAC9}"
+        )
+        self.display.setAlignment(
+            Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft
+        )
         self.display.setWordWrap(True)
         self.main_layout.addWidget(self.display, 2, 1)
 
     def plot(self):
-        # TODO : call calculate positions
-        self.calculate_positions()
         self.ax.clear()
         self.ax.grid(
             True, which="both", color="gray", linestyle="--", linewidth=0.5, alpha=0.5
@@ -167,26 +171,67 @@ class AMGcodeCalculator(QWidget):
         self.ax.set_xlabel("X Axis (mm)", fontsize=8, labelpad=8)
         self.ax.set_ylabel("Y Axis (mm)", fontsize=8, labelpad=8)
         self.ax.tick_params(labelsize=8)
-        if self.positions:
-            x = []
-            y = []
-            for xy in self.positions:
-                x.append(xy[0])
-                y.append(xy[1])
-            self.ax.plot(x, y, ".")  # blue circles with lines
+
+        if self.substrate_combobox.currentText() == "Rectangle":
+            self.ax.add_patch(
+                patches.Rectangle(
+                    (0, 0),
+                    float(self.substrate_width.text()),
+                    float(self.substrate_height.text()),
+                    edgecolor="black",
+                    facecolor="lightgray",
+                )
+            )
+        elif self.substrate_combobox.currentText() == "Circle":
+            self.ax.add_patch(
+                patches.Circle(
+                    (
+                        float(self.substrate_radius.text()),
+                        float(self.substrate_radius.text()),
+                    ),
+                    float(self.substrate_radius.text()),
+                    edgecolor="black",
+                    facecolor="lightgray",
+                )
+            )
+
+        shape = self.shape_combobox.currentText()
+        for xy in self.positions:
+            if shape == "Single Track":
+                self.ax.add_line(
+                    plt.Line2D(
+                        (xy[0], xy[0]),
+                        (xy[1], xy[1] + float(self.track_length.text())),
+                        color="blue",
+                        linewidth=2,
+                    )
+                )
+            elif shape == "Thin Wall":
+                self.ax.add_line(
+                    plt.Line2D(
+                        (xy[0], xy[0]),
+                        (xy[1], xy[1] + float(self.wall_length.text())),
+                        color="blue",
+                        linewidth=2,
+                    )
+                )
+            elif shape == "Cube":
+                self.ax.add_patch(
+                    patches.Rectangle(
+                        (xy[0], xy[1]),
+                        float(self.cube_length.text()),
+                        float(self.cube_height.text()),
+                        edgecolor="blue",
+                        facecolor="blue",
+                    )
+                )
+
         self.ax.set_aspect("equal")
+        # # self.ax.relim()
+        # self.ax.autoscale()
+        self.ax.autoscale_view()
         self.figure.subplots_adjust(bottom=0.2, left=0.2)
         self.canvas.draw()
-
-    def draw_rectangle(ax, width, length):
-        rectangle = patches.Rectangle((0, 0), width, length, edgecolor='black', facecolor='lightgray')
-        ax.add_patch(rectangle)
-
-    def draw_tracks(ax, track_positions, track_length):
-        for position in track_positions:
-            x_position, y_position = position
-            track = plt.Line2D([x_position, x_position], [y_position, y_position + track_length], color='blue', linewidth=2)
-            ax.add_line(track)
 
     def on_click(self, event):
         self.display.setText(f"Clicked at x={event.xdata}, y={event.ydata}")
@@ -204,7 +249,7 @@ class AMGcodeCalculator(QWidget):
 
         label2 = QLabel("Number of tracks: ")
         self.track_num = QLineEdit()
-        self.track_num.setText("90")
+        self.track_num.setText("60")
         layout.addWidget(label2, 1, 0)
         layout.addWidget(self.track_num, 1, 1)
 
@@ -241,7 +286,7 @@ class AMGcodeCalculator(QWidget):
 
         label3 = QLabel("Number of walls: ")
         self.wall_num = QLineEdit()
-        self.wall_num.setText("90")
+        self.wall_num.setText("60")
         layout.addWidget(label3, 2, 0)
         layout.addWidget(self.wall_num, 2, 1)
 
@@ -383,7 +428,9 @@ class AMGcodeCalculator(QWidget):
             rows = math.ceil(num / cols)
 
             if rows * vlength + (rows - 1) * vdistance > height - 2 * margin:
-                self.display.setText(f"Cannot fit {num} squares of size {hlength}x{vlength} in a rectangle of dimensions {width}x{height}")
+                self.display.setText(
+                    f"Cannot fit {num} squares of size {hlength}x{vlength} in a rectangle of dimensions {width}x{height}"
+                )
                 return False
 
             x0 = margin
@@ -394,7 +441,11 @@ class AMGcodeCalculator(QWidget):
                 col = i % cols
                 x = x0 + col * (hlength + hdistance)
                 y = y0 + row * (vlength + vdistance)
-                self.positions.append((x, y, 0)) #TODO : currently z is considered tobe leveled with substrate
+                self.positions.append(
+                    (x, y, 0)
+                )  # TODO : currently z is considered tobe leveled with substrate
+
+            self.plot()
 
         elif self.substrate_combobox.currentText() == "Circle":
             radius = float(self.substrate_radius.text())
@@ -406,9 +457,11 @@ class AMGcodeCalculator(QWidget):
             grid_height = rows * vlength + (rows - 1) * vdistance
 
             if (grid_width / 2) ** 2 + (grid_height / 2) ** 2 > (radius - margin) ** 2:
-                self.display.setText(f"Cannot fit {num} squares of size {hlength}x{vlength} in a circle of radius {radius}")
+                self.display.setText(
+                    f"Cannot fit {num} squares of size {hlength}x{vlength} in a circle of radius {radius}"
+                )
                 return False
-                
+
             x0 = radius - grid_width / 2
             y0 = radius - grid_height / 2
 
@@ -418,8 +471,12 @@ class AMGcodeCalculator(QWidget):
                 x = x0 + col * (hlength + hdistance)
                 y = y0 + row * (vlength + vdistance)
                 self.positions.append((x, y, 0))
+
+        self.display.setText("Configuration calculated")
+        self.plot()
+
         return True
-    
+
     def generate_gcode(self):
         if self.filedrop.file_path is None:
             self.display.setText("There are no CSV file to read")
@@ -457,10 +514,12 @@ class AMGcodeCalculator(QWidget):
             self.gcode.append("G21 ; set units to millimeters\n")
             self.gcode.append("T11 G43 H11 M6 ; set tool as T11, perform tool change\n")
             self.gcode.append("G1 Z5 F5000 ; move nozzle up 5mm\n")
-            self.gcode.append("M64 P2 ; Starts fume extractor\n") #TODO : add machine specific code
+            self.gcode.append(
+                "M64 P2 ; Starts fume extractor\n"
+            )  # TODO : add machine specific code
             self.gcode.append("M64 P3 ; Starts argon purge gas\n")
             self.gcode.append("G4 P0.001 ; Added because G1 being skipped\n")
-            self.gcode.append(f"{self.mscode["gcode_laser_on"]} ; Turn on the laser\n") 
+            self.gcode.append(f"{self.mscode['gcode_laser_on']} ; Turn on the laser\n")
 
             csv_data = []
             with open(self.filedrop.file_path, "r") as f:
@@ -474,69 +533,105 @@ class AMGcodeCalculator(QWidget):
 
             for i, position in enumerate(self.positions):
                 self.gcode.append(f"\n;===Starting {shape} {i + 1}===\n")
-                x, y ,z = position
+                x, y, z = position
                 curr_height = 0
                 vertical = True
                 x_direction = True
                 y_direction = True
                 while curr_height <= height:
                     curr_length = 0
-                    while curr_length <= hlength: #TODO : assumes hlength == v_length
-                        _, r_id, hs_opt_ls, w_l, p_ls, ss_ls, rpm_1, rpm_2, t_ls = csv_data[idx % len(csv_data)]
-                        if rpm_1 != last_rpm_1 or rpm_2 != last_rpm_2: #TODO : make the rpm gcode lines independent
+                    while curr_length <= hlength:  # TODO : assumes hlength == v_length
+                        _, r_id, hs_opt_ls, w_l, p_ls, ss_ls, rpm_1, rpm_2, t_ls = (
+                            csv_data[idx % len(csv_data)]
+                        )
+                        if (
+                            rpm_1 != last_rpm_1 or rpm_2 != last_rpm_2
+                        ):  # TODO : make the rpm gcode lines independent
                             self.gcode.append("\n;===Adjusting deposition rate===")
-                            self.gcode.append(f"\nM205 (H_0_V_{rpm_1}) ; Feed rate for hopper 1\n") #TODO : add machine specific code
-                            self.gcode.append("M205 (H_1_V_2.5) ; Argon carrier gas flow rate hopper 1\n") #TODO : add different argon gas flow rate?
-                            self.gcode.append(f"M205 (H_2_V_{rpm_2}) ; Feed rate for hopper 2\n")
-                            self.gcode.append("M205 (H_3_V_2.5) ; Argon carrier gas flow rate hopper 2\n")
-                            self.gcode.append("G4 P30 ; Powder stabilization\n") #TODO : waiting time
+                            self.gcode.append(
+                                f"\nM205 (H_0_V_{rpm_1}) ; Feed rate for hopper 1\n"
+                            )  # TODO : add machine specific code
+                            self.gcode.append(
+                                "M205 (H_1_V_2.5) ; Argon carrier gas flow rate hopper 1\n"
+                            )  # TODO : add different argon gas flow rate?
+                            self.gcode.append(
+                                f"M205 (H_2_V_{rpm_2}) ; Feed rate for hopper 2\n"
+                            )
+                            self.gcode.append(
+                                "M205 (H_3_V_2.5) ; Argon carrier gas flow rate hopper 2\n"
+                            )
+                            self.gcode.append(
+                                "G4 P30 ; Powder stabilization\n"
+                            )  # TODO : waiting time
                             last_rpm_1 = rpm_1
                             last_rpm_2 = rpm_2
                         if vertical:
                             if y_direction:
-                                self.strike_gcode((x, y, z), (hs_opt_ls, w_l, p_ls, ss_ls, rpm_1, rpm_2), vlength, "+y")
+                                self.strike_gcode(
+                                    (x, y, z),
+                                    (hs_opt_ls, w_l, p_ls, ss_ls, rpm_1, rpm_2),
+                                    vlength,
+                                    "+y",
+                                )
                                 idx += 1
                                 y += vlength
                                 x += hs_opt_ls * w_l * (x_direction * 2 - 1)
                                 y_direction = not y_direction
                                 curr_length += hs_opt_ls * w_l
                             else:
-                                self.strike_gcode((x, y, z), (hs_opt_ls, w_l, p_ls, ss_ls, rpm_1, rpm_2), vlength, "-y")
+                                self.strike_gcode(
+                                    (x, y, z),
+                                    (hs_opt_ls, w_l, p_ls, ss_ls, rpm_1, rpm_2),
+                                    vlength,
+                                    "-y",
+                                )
                                 idx += 1
                                 y -= vlength
                                 x += hs_opt_ls * w_l * (x_direction * 2 - 1)
                                 y_direction = not y_direction
                                 curr_length += hs_opt_ls * w_l
-                        
+
                         else:
                             if x_direction:
-                                self.strike_gcode((x, y, z), (hs_opt_ls, w_l, p_ls, ss_ls, rpm_1, rpm_2), hlength, "+x")
+                                self.strike_gcode(
+                                    (x, y, z),
+                                    (hs_opt_ls, w_l, p_ls, ss_ls, rpm_1, rpm_2),
+                                    hlength,
+                                    "+x",
+                                )
                                 idx += 1
                                 x += hlength
                                 y += hs_opt_ls * w_l * (y_direction * 2 - 1)
                                 x_direction = not x_direction
                                 curr_length += hs_opt_ls * w_l
                             else:
-                                self.strike_gcode((x, y, z), (hs_opt_ls, w_l, p_ls, ss_ls, rpm_1, rpm_2), hlength, "-x")
+                                self.strike_gcode(
+                                    (x, y, z),
+                                    (hs_opt_ls, w_l, p_ls, ss_ls, rpm_1, rpm_2),
+                                    hlength,
+                                    "-x",
+                                )
                                 idx += 1
                                 x -= hlength
                                 y += hs_opt_ls * w_l * (y_direction * 2 - 1)
                                 x_direction = not x_direction
                                 curr_length += hs_opt_ls * w_l
-            
+
                     z += t_ls
-                    curr_height += t_ls #TODO
+                    curr_height += t_ls  # TODO
                     if vertical:
                         x -= hs_opt_ls * w_l * (x_direction * 2 - 1)
                         x_direction = not x_direction
                     elif vertical:
                         y -= hs_opt_ls * w_l * (y_direction * 2 - 1)
                         y_direction = not y_direction
-                    
+
                     if shape == "Cube":
                         vertical = not vertical
 
-            self.gcode.append("\nM201 (EMOFF) ; Turn off the laser\n") #TODO : add machine specific code
+            self.gcode.append(
+                "\nM201 (EMOFF) ; Turn off the laser\n"
+            )  # TODO : add machine specific code
             self.gcode.append("M65 P3" + " ; Stops Argon purge gas\n")
             self.gcode.append("M65 P2" + " ; Stops fume extractor\n")
             self.gcode.append("M205 (H_0_V_0) ; Turn off hopper 1\n")
@@ -549,11 +644,12 @@ class AMGcodeCalculator(QWidget):
                     f.write(row)
             self.display.setText("Gcode successfully generated")
 
-
     def strike_gcode(self, initial_pos, strike_data, strike_size, strike_direction):
         hs_opt_ls, w_l, p_ls, ss_ls, rpm_1, rpm_2 = strike_data
         self.gcode.append("\n")
-        if (initial_pos[0] - self.position[0])**2 + (initial_pos[1] - self.position[1])**2 >= (hs_opt_ls * w_l)**2:
+        if (initial_pos[0] - self.position[0]) ** 2 + (
+            initial_pos[1] - self.position[1]
+        ) ** 2 >= (hs_opt_ls * w_l) ** 2:
             self.gcode.append(f"G1 Z{self.safe_height} F{self.not_print_speed}\n")
         self.gcode.append(f"G1 X{initial_pos[0]} Y{initial_pos[1]}\n")
         self.gcode.append(f"G1 Z{initial_pos[2]}\n")
@@ -561,18 +657,34 @@ class AMGcodeCalculator(QWidget):
         self.gcode.append(f"M201 (SDC {p_ls})\n")
         if strike_direction == "+x":
             self.gcode.append(f"G1 X{initial_pos[0] + strike_size} F{ss_ls}\n")
-            self.position = (initial_pos[0] + strike_size, initial_pos[1], initial_pos[2])
+            self.position = (
+                initial_pos[0] + strike_size,
+                initial_pos[1],
+                initial_pos[2],
+            )
         elif strike_direction == "-x":
             self.gcode.append(f"G1 X{initial_pos[0] - strike_size} F{ss_ls}\n")
-            self.position = (initial_pos[0] - strike_size, initial_pos[1], initial_pos[2])
+            self.position = (
+                initial_pos[0] - strike_size,
+                initial_pos[1],
+                initial_pos[2],
+            )
         elif strike_direction == "+y":
             self.gcode.append(f"G1 Y{initial_pos[1] + strike_size} F{ss_ls}\n")
-            self.position = (initial_pos[0], initial_pos[1] + strike_size, initial_pos[2])
+            self.position = (
+                initial_pos[0],
+                initial_pos[1] + strike_size,
+                initial_pos[2],
+            )
         elif strike_direction == "-y":
             self.gcode.append(f"G1 Y{initial_pos[1] - strike_size} F{ss_ls}\n")
-            self.position = (initial_pos[0], initial_pos[1] + strike_size, initial_pos[2])
+            self.position = (
+                initial_pos[0],
+                initial_pos[1] + strike_size,
+                initial_pos[2],
+            )
         self.gcode.append("G4 P0.001\n")
-        self.gcode.append(f"{self.mscode["gcode_laser_power"](0)}\n")
+        self.gcode.append(f"{self.mscode['gcode_laser_power'](0)}\n")
 
 
 class FileDrop(QLabel):
