@@ -3,7 +3,7 @@ import csv
 import sys
 from pathlib import Path
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QSettings
 from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QMouseEvent
 from PyQt6.QtWidgets import (
     QApplication,
@@ -56,8 +56,6 @@ class AMGcodeCalculator(QWidget):
         main_widget = QWidget()
         tab_widget.addTab(main_widget, "AM G-code Generator")
 
-        self.safe_height = 25
-        self.not_print_speed = 1560 * 2.5
         self.mscode = {
             "gcode_start_flow": lambda i: f"M64 P{i}",
             "gcode_stop_flow": lambda i: f"M65 P{i}",
@@ -178,6 +176,7 @@ class AMGcodeCalculator(QWidget):
         tab_widget.addTab(setting_widget, "Machine settings")
 
         settings_layout = QVBoxLayout(setting_widget)
+        self.settings = QSettings("AMGcodeGenerator", "Settings")
 
         # title2 = QLabel("Machine Settings")
         # title2.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
@@ -188,7 +187,7 @@ class AMGcodeCalculator(QWidget):
         dir_label = QLabel("Save directory: ")
         dir_layout.addWidget(dir_label)
         self.dir_input = QLineEdit()
-        self.dir_input.setText(f"{Path.home() / 'Downloads'}")
+        self.dir_input.setText(self.settings.value("save_directory", f"{Path.home() / 'Downloads'}"))
         dir_layout.addWidget(self.dir_input)
         dir_button = QPushButton("Click to browse...")
         dir_button.clicked.connect(self.browse)
@@ -196,49 +195,52 @@ class AMGcodeCalculator(QWidget):
         settings_layout.addLayout(dir_layout)
 
         sh_layout = QHBoxLayout()
-        sh_label = QLabel("Safe  height (mm): ")
+        sh_label = QLabel("Safe height (mm): ")
         sh_layout.addWidget(sh_label)
-        sh_input = QLineEdit()
-        sh_input.setText("25")
-        sh_layout.addWidget(sh_input)
+        self.sh_input = QLineEdit()
+        self.sh_input.setText(self.settings.value("safe_height", "25"))
+        sh_layout.addWidget(self.sh_input)
         settings_layout.addLayout(sh_layout)
 
         nps_layout = QHBoxLayout()
-        nps_label = QLabel("Not printing speed: ")
+        nps_label = QLabel("Not printing speed (mm/s): ")
         nps_layout.addWidget(nps_label)
-        nps_input = QLineEdit()
-        nps_input.setText("3900")
-        nps_layout.addWidget(nps_input)
+        self.nps_input = QLineEdit()
+        self.nps_input.setText(self.settings.value("not_print_speed", "3900"))
+        nps_layout.addWidget(self.nps_input)
         settings_layout.addLayout(nps_layout)
 
-        lsp_layout = QHBoxLayout()
-        lsp_label = QLabel("Laser power:")
-        lsp_layout.addWidget(lsp_label)
-        lsp_input = QLineEdit()
-        lsp_input.setText("1000")
-        lsp_layout.addWidget(lsp_input)
-        settings_layout.addLayout(lsp_layout)
+        # Laser absolute power
+        # lsp_layout = QHBoxLayout()
+        # lsp_label = QLabel("Laser power:")
+        # lsp_layout.addWidget(lsp_label)
+        # self.lsp_input = QLineEdit()
+        # self.lsp_input.setText(self.settings.value("laser_power", "1000"))
+        # lsp_layout.addWidget(self.lsp_input)
+        # settings_layout.addLayout(lsp_layout)
 
         gfr_layout = QHBoxLayout()
         gfr_label = QLabel("Gas flow rate: ")
         gfr_layout.addWidget(gfr_label)
-        gfr_input = QLineEdit()
-        gfr_input.setText("2.5")
-        gfr_layout.addWidget(gfr_input)
+        self.gfr_input = QLineEdit()
+        self.gfr_input.setText(self.settings.value("gas_flow_rate", "2.5"))
+        gfr_layout.addWidget(self.gfr_input)
         settings_layout.addLayout(gfr_layout)
 
         wt_layout = QHBoxLayout()
         wt_label = QLabel("Waiting time after material feed rate change (s): ")
         wt_layout.addWidget(wt_label)
-        wt_input = QLineEdit()
-        wt_input.setText("30")
-        wt_layout.addWidget(wt_input)
+        self.wt_input = QLineEdit()
+        self.wt_input.setText(self.settings.value("waiting_time", "30"))
+        wt_layout.addWidget(self.wt_input)
         settings_layout.addLayout(wt_layout)
 
         button_layout = QHBoxLayout()
         reset_button = QPushButton("Reset")
+        reset_button.clicked.connect(self.reset_settings)
         button_layout.addWidget(reset_button)
         save_button = QPushButton("Save")
+        save_button.clicked.connect(self.save_settings)
         button_layout.addWidget(save_button)
         settings_layout.addLayout(button_layout)
 
@@ -618,7 +620,7 @@ class AMGcodeCalculator(QWidget):
                 vertical = True
                 x_direction = True
                 y_direction = True
-                self.gcode.append(f"G1 Z{self.safe_height} F{self.not_print_speed}\n")
+                self.gcode.append(f"G1 Z{self.sh_input.text()} F{self.nps_input.text()}\n")
                 while curr_height <= height:
                     curr_length = 0
                     while curr_length <= hlength:  # TODO : assumes hlength == v_length
@@ -633,16 +635,16 @@ class AMGcodeCalculator(QWidget):
                                 f"\n{self.mscode["gcode_set_dispenser_speed"](0, rpm_1)} ; Feed rate for hopper 1\n"
                             )
                             self.gcode.append(
-                                f"{self.mscode["gcode_set_dispenser_speed"](1, 2.5)} ; Argon carrier gas flow rate hopper 1\n"
+                                f"{self.mscode["gcode_set_dispenser_speed"](1, self.gfr_input.text())} ; Argon carrier gas flow rate hopper 1\n"
                             )  # TODO : add different argon gas flow rate?
                             self.gcode.append(
                                 f"{self.mscode["gcode_set_dispenser_speed"](2, rpm_2)} ; Feed rate for hopper 2\n"
                             )
                             self.gcode.append(
-                                f"{self.mscode["gcode_set_dispenser_speed"](3, 2.5)} ; Argon carrier gas flow rate hopper 2\n"
+                                f"{self.mscode["gcode_set_dispenser_speed"](3, self.gfr_input.text())} ; Argon carrier gas flow rate hopper 2\n"
                             )
                             self.gcode.append(
-                                "G4 P30 ; Powder stabilization\n"
+                                f"G4 P{self.wt_input} ; Powder stabilization\n"
                             )  # TODO : waiting time
                             last_rpm_1 = rpm_1
                             last_rpm_2 = rpm_2
@@ -650,7 +652,7 @@ class AMGcodeCalculator(QWidget):
                             if y_direction:
                                 self.strike_gcode(
                                     (x, y, z),
-                                    (hs_opt_ls, w_l, p_ls, ss_ls),
+                                    (p_ls, ss_ls),
                                     vlength,
                                     "+y",
                                 )
@@ -662,7 +664,7 @@ class AMGcodeCalculator(QWidget):
                             else:
                                 self.strike_gcode(
                                     (x, y, z),
-                                    (hs_opt_ls, w_l, p_ls, ss_ls),
+                                    (p_ls, ss_ls),
                                     vlength,
                                     "-y",
                                 )
@@ -676,7 +678,7 @@ class AMGcodeCalculator(QWidget):
                             if x_direction:
                                 self.strike_gcode(
                                     (x, y, z),
-                                    (hs_opt_ls, w_l, p_ls, ss_ls),
+                                    (p_ls, ss_ls),
                                     hlength,
                                     "+x",
                                 )
@@ -688,7 +690,7 @@ class AMGcodeCalculator(QWidget):
                             else:
                                 self.strike_gcode(
                                     (x, y, z),
-                                    (hs_opt_ls, w_l, p_ls, ss_ls),
+                                    (p_ls, ss_ls),
                                     hlength,
                                     "-x",
                                 )
@@ -726,11 +728,11 @@ class AMGcodeCalculator(QWidget):
             self.display.setText("G-code successfully generated")
 
     def strike_gcode(self, initial_pos, strike_data, strike_size, strike_direction):
-        hs_opt_ls, w_l, p_ls, ss_ls = strike_data
+        p_ls, ss_ls = strike_data
         self.gcode.append("\n")
         # if (abs(initial_pos[0] - self.position[0]) >= (hs_opt_ls * w_l) 
         # or abs(initial_pos[1] - self.position[1]) >= (hs_opt_ls * w_l)):
-        #     self.gcode.append(f"G1 Z{self.safe_height} F{self.not_print_speed}\n")
+        #     self.gcode.append(f"G1 Z{self.sh_input.text()} F{self.nps_input.text()}\n")
         self.gcode.append(f"G1 X{initial_pos[0]} Y{initial_pos[1]}\n")
         self.gcode.append(f"G1 Z{initial_pos[2]}\n")
         self.gcode.append("G4 P0.001\n")
@@ -771,6 +773,22 @@ class AMGcodeCalculator(QWidget):
             self, "Select Folder", "", QFileDialog.Option.ShowDirsOnly
         )
         self.dir_input.setText(str(Path(file_str)))
+
+    def reset_settings(self):
+        self.dir_input.setText(self.settings.value("save_directory", f"{Path.home() / 'Downloads'}"))
+        self.sh_input.setText(self.settings.value("safe_height", "25"))
+        self.nps_input.setText(self.settings.value("not_print_speed", "3900"))
+        # self.lsp_input.setText(self.settings.value("laser_power", "1000"))
+        self.gfr_input.setText(self.settings.value("gas_flow_rate", "2.5"))
+        self.wt_input.setText(self.settings.value("waiting_time", "30"))
+
+    def save_settings(self):
+        self.settings.setValue("save_directory", self.dir_input.text())
+        self.settings.setValue("safe_height", self.sh_input.text())
+        self.settings.setValue("not_print_speed", self.nps_input.text())
+        # self.settings.setValue("laser_power", self.lsp_input.text())
+        self.settings.setValue("gas_flow_rate", self.gfr_input.text())
+        self.settings.setValue("waiting_time", self.wt_input.text())
 
 
 class FileDrop(QLabel):
