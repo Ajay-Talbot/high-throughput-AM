@@ -19,7 +19,8 @@ from PyQt6.QtWidgets import (
     QComboBox,
     QFileDialog,
     QScrollArea,
-    QTabWidget
+    QTabWidget,
+    QSizePolicy,
 )
 
 import matplotlib.pyplot as plt
@@ -31,8 +32,8 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("AM GCode Generator")
-        self.resize(1200, 800)
+        self.setWindowTitle("AM G-Code Generator")
+        # self.resize(1200, 800)
 
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
@@ -47,35 +48,46 @@ class AMGcodeCalculator(QWidget):
     def __init__(self):
         super().__init__()
 
+        layout = QVBoxLayout(self)
+
+        tab_widget = QTabWidget()
+        layout.addWidget(tab_widget)
+
+        main_widget = QWidget()
+        tab_widget.addTab(main_widget, "AM G-code Generator")
+
         self.safe_height = 25
         self.not_print_speed = 1560 * 2.5
         self.mscode = {
+            "gcode_start_flow": lambda i: f"M64 P{i}",
+            "gcode_stop_flow": lambda i: f"M65 P{i}",
             "gcode_laser_on": "M201 (EMON)",
             "gcode_laser_off": "M201 (EMOFF)",
-            "gcode_laser_power": lambda x: f"M201 (SDC {x})",
+            "gcode_laser_power": lambda power: f"M201 (SDC {power})",
             "gcode_aimingbeam_on": "M201 (ABN)",
             "gcode_aimingbeam_off": "M201 (ABF)",
+            "gcode_set_dispenser_speed": lambda i, rpm: f"M205 (H_{i}_V_{rpm})",
         }
 
-        self.main_layout = QGridLayout(self)
-        self.main_layout.setContentsMargins(30, 10, 30, 10)
-        self.main_layout.setSpacing(3)
-        self.main_layout.setColumnMinimumWidth(1, 500)
-        self.main_layout.setColumnStretch(0, 1)
-        self.main_layout.setColumnStretch(2, 4)
-        self.main_layout.setRowMinimumHeight(2, 150)
+        self.main_layout = QGridLayout(main_widget)
+        # self.main_layout.setContentsMargins(30, 10, 30, 10)
+        # self.main_layout.setSpacing(3)
+        # self.main_layout.setColumnMinimumWidth(1, 500)
+        # self.main_layout.setColumnStretch(0, 1)
+        # self.main_layout.setColumnStretch(2, 4)
+        # self.main_layout.setRowMinimumHeight(2, 150)
 
-        title = QLabel("AM GCode Generator\n")
+        title = QLabel("AM G-Code Generator\n")
         title.setStyleSheet("QLabel {font-size: 18px; font-weight: 700;}")
         self.main_layout.addWidget(title, 0, 0, Qt.AlignmentFlag.AlignTop)
 
         side_tab = QVBoxLayout()
-        side_tab.setSpacing(0)
+        # side_tab.setSpacing(0)
 
         self.filedrop = FileDrop()
         # filedrop.setFixedWidth(400)
         side_tab.addWidget(self.filedrop)
-        side_tab.addSpacing(10)
+        # side_tab.addSpacing(10)
 
         shape_layout = QHBoxLayout()
         shape_label = QLabel("Select the shape of the print: ")
@@ -133,7 +145,7 @@ class AMGcodeCalculator(QWidget):
 
         self.figure = Figure()
         self.canvas = FigureCanvas(self.figure)
-        self.canvas.setMinimumSize(400, 400)
+        # self.canvas.setMinimumSize(400, 400)
 
         self.canvas.mpl_connect("button_press_event", self.on_click)
 
@@ -160,6 +172,75 @@ class AMGcodeCalculator(QWidget):
         )
         self.display.setWordWrap(True)
         self.main_layout.addWidget(self.display, 2, 1)
+
+
+        setting_widget = QWidget()
+        tab_widget.addTab(setting_widget, "Machine settings")
+
+        settings_layout = QVBoxLayout(setting_widget)
+
+        # title2 = QLabel("Machine Settings")
+        # title2.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
+        # title2.setStyleSheet("QLabel {font-size: 18px; font-weight: 700;}")
+        # settings_layout.addWidget(title2)
+
+        dir_layout = QHBoxLayout()
+        dir_label = QLabel("Save directory: ")
+        dir_layout.addWidget(dir_label)
+        self.dir_input = QLineEdit()
+        self.dir_input.setText(f"{Path.home() / 'Downloads'}")
+        dir_layout.addWidget(self.dir_input)
+        dir_button = QPushButton("Click to browse...")
+        dir_button.clicked.connect(self.browse)
+        dir_layout.addWidget(dir_button)
+        settings_layout.addLayout(dir_layout)
+
+        sh_layout = QHBoxLayout()
+        sh_label = QLabel("Safe  height (mm): ")
+        sh_layout.addWidget(sh_label)
+        sh_input = QLineEdit()
+        sh_input.setText("25")
+        sh_layout.addWidget(sh_input)
+        settings_layout.addLayout(sh_layout)
+
+        nps_layout = QHBoxLayout()
+        nps_label = QLabel("Not printing speed: ")
+        nps_layout.addWidget(nps_label)
+        nps_input = QLineEdit()
+        nps_input.setText("3900")
+        nps_layout.addWidget(nps_input)
+        settings_layout.addLayout(nps_layout)
+
+        lsp_layout = QHBoxLayout()
+        lsp_label = QLabel("Laser power:")
+        lsp_layout.addWidget(lsp_label)
+        lsp_input = QLineEdit()
+        lsp_input.setText("1000")
+        lsp_layout.addWidget(lsp_input)
+        settings_layout.addLayout(lsp_layout)
+
+        gfr_layout = QHBoxLayout()
+        gfr_label = QLabel("Gas flow rate: ")
+        gfr_layout.addWidget(gfr_label)
+        gfr_input = QLineEdit()
+        gfr_input.setText("2.5")
+        gfr_layout.addWidget(gfr_input)
+        settings_layout.addLayout(gfr_layout)
+
+        wt_layout = QHBoxLayout()
+        wt_label = QLabel("Waiting time after material feed rate change (s): ")
+        wt_layout.addWidget(wt_label)
+        wt_input = QLineEdit()
+        wt_input.setText("30")
+        wt_layout.addWidget(wt_input)
+        settings_layout.addLayout(wt_layout)
+
+        button_layout = QHBoxLayout()
+        reset_button = QPushButton("Reset")
+        button_layout.addWidget(reset_button)
+        save_button = QPushButton("Save")
+        button_layout.addWidget(save_button)
+        settings_layout.addLayout(button_layout)
 
     def plot(self):
         self.ax.clear()
@@ -238,7 +319,7 @@ class AMGcodeCalculator(QWidget):
     def create_widget_track(self):
         w = QWidget()
         layout = QGridLayout(w)
-        layout.setSpacing(1)
+        # layout.setSpacing(1)
 
         label1 = QLabel("Length of the tracks (mm): ")
         self.track_length = QLineEdit()
@@ -269,7 +350,7 @@ class AMGcodeCalculator(QWidget):
     def create_widget_wall(self):
         w = QWidget()
         layout = QGridLayout(w)
-        layout.setSpacing(1)
+        # layout.setSpacing(1)
 
         label1 = QLabel("Length of the walls (mm): ")
         self.wall_length = QLineEdit()
@@ -306,7 +387,7 @@ class AMGcodeCalculator(QWidget):
     def create_widget_cube(self):
         w = QWidget()
         layout = QGridLayout(w)
-        layout.setSpacing(1)
+        # layout.setSpacing(1)
 
         label1 = QLabel("Length of the cubes (mm): ")
         self.cube_length = QLineEdit()
@@ -351,7 +432,7 @@ class AMGcodeCalculator(QWidget):
     def create_widget_rectangle(self):
         w = QWidget()
         layout = QGridLayout(w)
-        layout.setSpacing(1)
+        # layout.setSpacing(1)
 
         width_label = QLabel("Substrate width (mm): ")
         self.substrate_width = QLineEdit()
@@ -376,7 +457,7 @@ class AMGcodeCalculator(QWidget):
     def create_widget_circle(self):
         w = QWidget()
         layout = QGridLayout(w)
-        layout.setSpacing(1)
+        # layout.setSpacing(1)
 
         radius_label = QLabel("Substrate radius (mm): ")
         self.substrate_radius = QLineEdit()
@@ -508,15 +589,15 @@ class AMGcodeCalculator(QWidget):
 
             self.gcode.append(f";===={shape} G-Code====\n")
             self.gcode.append("G90 G54 G64 G50 G17 G40 G80 G94 G91.1 G49\n")
-            self.gcode.append("G1 Z15 F2000 ; Lift the print head up before printing\n")
+            # self.gcode.append("G1 Z15 F2000 ; Lift the print head up before printing\n")
             self.gcode.append("G90 ; absolute coordinates\n")
             self.gcode.append("G21 ; set units to millimeters\n")
             self.gcode.append("T11 G43 H11 M6 ; set tool as T11, perform tool change\n")
-            self.gcode.append("G1 Z5 F5000 ; move nozzle up 5mm\n")
+            # self.gcode.append("G1 Z5 F5000 ; move nozzle up 5mm\n")
             self.gcode.append(
-                "M64 P2 ; Starts fume extractor\n"
-            )  # TODO : add machine specific code
-            self.gcode.append("M64 P3 ; Starts argon purge gas\n")
+                f"{self.mscode["gcode_start_flow"](2)} ; Starts fume extractor\n"
+            )
+            self.gcode.append(f"{self.mscode["gcode_start_flow"](3)} ; Starts argon purge gas\n")
             self.gcode.append("G4 P0.001 ; Added because G1 being skipped\n")
             self.gcode.append(f"{self.mscode['gcode_laser_on']} ; Turn on the laser\n")
 
@@ -537,6 +618,7 @@ class AMGcodeCalculator(QWidget):
                 vertical = True
                 x_direction = True
                 y_direction = True
+                self.gcode.append(f"G1 Z{self.safe_height} F{self.not_print_speed}\n")
                 while curr_height <= height:
                     curr_length = 0
                     while curr_length <= hlength:  # TODO : assumes hlength == v_length
@@ -545,19 +627,19 @@ class AMGcodeCalculator(QWidget):
                         )
                         if (
                             rpm_1 != last_rpm_1 or rpm_2 != last_rpm_2
-                        ):  # TODO : make the rpm gcode lines independent
+                        ):
                             self.gcode.append("\n;===Adjusting deposition rate===")
                             self.gcode.append(
-                                f"\nM205 (H_0_V_{rpm_1}) ; Feed rate for hopper 1\n"
-                            )  # TODO : add machine specific code
-                            self.gcode.append(
-                                "M205 (H_1_V_2.5) ; Argon carrier gas flow rate hopper 1\n"
-                            )  # TODO : add different argon gas flow rate?
-                            self.gcode.append(
-                                f"M205 (H_2_V_{rpm_2}) ; Feed rate for hopper 2\n"
+                                f"\n{self.mscode["gcode_set_dispenser_speed"](0, rpm_1)} ; Feed rate for hopper 1\n"
                             )
                             self.gcode.append(
-                                "M205 (H_3_V_2.5) ; Argon carrier gas flow rate hopper 2\n"
+                                f"{self.mscode["gcode_set_dispenser_speed"](1, 2.5)} ; Argon carrier gas flow rate hopper 1\n"
+                            )  # TODO : add different argon gas flow rate?
+                            self.gcode.append(
+                                f"{self.mscode["gcode_set_dispenser_speed"](2, rpm_2)} ; Feed rate for hopper 2\n"
+                            )
+                            self.gcode.append(
+                                f"{self.mscode["gcode_set_dispenser_speed"](3, 2.5)} ; Argon carrier gas flow rate hopper 2\n"
                             )
                             self.gcode.append(
                                 "G4 P30 ; Powder stabilization\n"
@@ -568,7 +650,7 @@ class AMGcodeCalculator(QWidget):
                             if y_direction:
                                 self.strike_gcode(
                                     (x, y, z),
-                                    (hs_opt_ls, w_l, p_ls, ss_ls, rpm_1, rpm_2),
+                                    (hs_opt_ls, w_l, p_ls, ss_ls),
                                     vlength,
                                     "+y",
                                 )
@@ -580,7 +662,7 @@ class AMGcodeCalculator(QWidget):
                             else:
                                 self.strike_gcode(
                                     (x, y, z),
-                                    (hs_opt_ls, w_l, p_ls, ss_ls, rpm_1, rpm_2),
+                                    (hs_opt_ls, w_l, p_ls, ss_ls),
                                     vlength,
                                     "-y",
                                 )
@@ -594,7 +676,7 @@ class AMGcodeCalculator(QWidget):
                             if x_direction:
                                 self.strike_gcode(
                                     (x, y, z),
-                                    (hs_opt_ls, w_l, p_ls, ss_ls, rpm_1, rpm_2),
+                                    (hs_opt_ls, w_l, p_ls, ss_ls),
                                     hlength,
                                     "+x",
                                 )
@@ -606,7 +688,7 @@ class AMGcodeCalculator(QWidget):
                             else:
                                 self.strike_gcode(
                                     (x, y, z),
-                                    (hs_opt_ls, w_l, p_ls, ss_ls, rpm_1, rpm_2),
+                                    (hs_opt_ls, w_l, p_ls, ss_ls),
                                     hlength,
                                     "-x",
                                 )
@@ -619,11 +701,9 @@ class AMGcodeCalculator(QWidget):
                     z += t_ls
                     curr_height += t_ls  # TODO
                     if vertical:
-                        # x -= (hs_opt_ls * w_l * (x_direction * 2 - 1))
                         x = position[0] + x_direction * hlength
                         x_direction = not x_direction
                     else:
-                        # y -= (hs_opt_ls * w_l * (y_direction * 2 - 1))
                         y = position[1] + y_direction * vlength
                         y_direction = not y_direction
 
@@ -631,31 +711,30 @@ class AMGcodeCalculator(QWidget):
                         vertical = not vertical
 
             self.gcode.append(
-                "\nM201 (EMOFF) ; Turn off the laser\n"
-            )  # TODO : add machine specific code
-            self.gcode.append("M65 P3" + " ; Stops Argon purge gas\n")
-            self.gcode.append("M65 P2" + " ; Stops fume extractor\n")
-            self.gcode.append("M205 (H_0_V_0) ; Turn off hopper 1\n")
-            self.gcode.append("M205 (H_1_V_0) ; Turn off hopper 1 carrier gas\n")
-            self.gcode.append("M205 (H_2_V_0) ; Turn off hopper 2\n")
-            self.gcode.append("M205 (H_3_V_0) ; Turn off hopper 2 carrier gas\n")
+                f"\n{self.mscode['gcode_laser_off']} ; Turn off the laser\n"
+            )
+            self.gcode.append(f"{self.mscode["gcode_stop_flow"](3)} ; Stops Argon purge gas\n")
+            self.gcode.append(f"{self.mscode["gcode_stop_flow"](2)} ; Stops fume extractor\n")
+            self.gcode.append(f"{self.mscode["gcode_set_dispenser_speed"](0, 0)} ; Turn off hopper 1\n")
+            self.gcode.append(f"{self.mscode["gcode_set_dispenser_speed"](1, 0)} ; Turn off hopper 1 carrier gas\n")
+            self.gcode.append(f"{self.mscode["gcode_set_dispenser_speed"](2, 0)} ; Turn off hopper 2\n")
+            self.gcode.append(f"{self.mscode["gcode_set_dispenser_speed"](3, 0)} ; Turn off hopper 2 carrier gas\n")
 
-            with open("teste.gcode", "w") as f:
+            with open(Path(self.dir_input.text()) / "test.gcode", "w") as f:
                 for row in self.gcode:
                     f.write(row)
-            self.display.setText("Gcode successfully generated")
+            self.display.setText("G-code successfully generated")
 
     def strike_gcode(self, initial_pos, strike_data, strike_size, strike_direction):
-        hs_opt_ls, w_l, p_ls, ss_ls, rpm_1, rpm_2 = strike_data
+        hs_opt_ls, w_l, p_ls, ss_ls = strike_data
         self.gcode.append("\n")
-        # if (initial_pos[0] - self.position[0]) ** 2 + (
-        #     initial_pos[1] - self.position[1]
-        # ) ** 2 >= (hs_opt_ls * w_l) ** 2:
-            # self.gcode.append(f"G1 Z{self.safe_height} F{self.not_print_speed}\n")
+        # if (abs(initial_pos[0] - self.position[0]) >= (hs_opt_ls * w_l) 
+        # or abs(initial_pos[1] - self.position[1]) >= (hs_opt_ls * w_l)):
+        #     self.gcode.append(f"G1 Z{self.safe_height} F{self.not_print_speed}\n")
         self.gcode.append(f"G1 X{initial_pos[0]} Y{initial_pos[1]}\n")
         self.gcode.append(f"G1 Z{initial_pos[2]}\n")
         self.gcode.append("G4 P0.001\n")
-        self.gcode.append(f"M201 (SDC {p_ls})\n")
+        self.gcode.append(f"{self.mscode["gcode_laser_power"](p_ls)}\n")
         if strike_direction == "+x":
             self.gcode.append(f"G1 X{initial_pos[0] + strike_size} F{ss_ls}\n")
             self.position = (
@@ -686,6 +765,12 @@ class AMGcodeCalculator(QWidget):
             )
         self.gcode.append("G4 P0.001\n")
         self.gcode.append(f"{self.mscode['gcode_laser_power'](0)}\n")
+
+    def browse(self, event: QMouseEvent):
+        file_str = QFileDialog.getExistingDirectory(
+            self, "Select Folder", "", QFileDialog.Option.ShowDirsOnly
+        )
+        self.dir_input.setText(str(Path(file_str)))
 
 
 class FileDrop(QLabel):
