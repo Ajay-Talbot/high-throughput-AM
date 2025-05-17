@@ -9,6 +9,7 @@ from PyQt6.QtWidgets import (
     QApplication,
     QMainWindow,
     QWidget,
+    QTabWidget,
     QStackedWidget,
     QVBoxLayout,
     QHBoxLayout,
@@ -19,7 +20,6 @@ from PyQt6.QtWidgets import (
     QComboBox,
     QFileDialog,
     QScrollArea,
-    QTabWidget,
     QSizePolicy,
 )
 
@@ -33,7 +33,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("AM G-Code Generator")
-        # self.resize(1200, 800)
+        self.resize(1200, 600)
 
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
