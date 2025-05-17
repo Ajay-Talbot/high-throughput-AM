@@ -722,7 +722,7 @@ class AMGcodeCalculator(QWidget):
             self.gcode.append(f"{self.mscode["gcode_set_dispenser_speed"](2, 0)} ; Turn off hopper 2\n")
             self.gcode.append(f"{self.mscode["gcode_set_dispenser_speed"](3, 0)} ; Turn off hopper 2 carrier gas\n")
 
-            with open(Path(self.dir_input.text()) / "test.gcode", "w") as f:
+            with open(Path(self.dir_input.text()) / f"{self.shape_combobox.currentText()}s_{self.substrate_combobox.currentText()}_({self.filedrop.file_path.stem}).gcode", "w") as f:
                 for row in self.gcode:
                     f.write(row)
             self.display.setText("G-code successfully generated")
