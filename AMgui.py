@@ -1,39 +1,38 @@
+import math
+import csv
+import sys
+from pathlib import Path
+
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QMouseEvent
 from PyQt6.QtWidgets import (
     QApplication,
+    QMainWindow,
     QWidget,
-    QPushButton,
-    QLabel,
-    QLineEdit,
+    QStackedWidget,
     QVBoxLayout,
     QHBoxLayout,
     QGridLayout,
+    QLabel,
+    QPushButton,
+    QLineEdit,
     QComboBox,
-    QStackedWidget,
     QFileDialog,
     QScrollArea,
-    QScrollBar,
-    QMainWindow,
-    QSlider,
+    QTabWidget
 )
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QIcon, QDragEnterEvent, QDropEvent, QMouseEvent, QGuiApplication
-import sys
-from pathlib import Path
+
 import matplotlib.pyplot as plt
-from matplotlib.backends.backend_qt5agg import (
-    FigureCanvasQTAgg as FigureCanvas,
-    NavigationToolbar2QT as NavigationToolbar,
-)
-from matplotlib.figure import Figure
 import matplotlib.patches as patches
-import math
-import csv
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("AM GCode Generator")
+        self.resize(1200, 800)
 
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
@@ -620,10 +619,12 @@ class AMGcodeCalculator(QWidget):
                     z += t_ls
                     curr_height += t_ls  # TODO
                     if vertical:
-                        x -= hs_opt_ls * w_l * (x_direction * 2 - 1)
+                        # x -= (hs_opt_ls * w_l * (x_direction * 2 - 1))
+                        x = position[0] + x_direction * hlength
                         x_direction = not x_direction
-                    elif vertical:
-                        y -= hs_opt_ls * w_l * (y_direction * 2 - 1)
+                    else:
+                        # y -= (hs_opt_ls * w_l * (y_direction * 2 - 1))
+                        y = position[1] + y_direction * vlength
                         y_direction = not y_direction
 
                     if shape == "Cube":
@@ -647,10 +648,10 @@ class AMGcodeCalculator(QWidget):
     def strike_gcode(self, initial_pos, strike_data, strike_size, strike_direction):
         hs_opt_ls, w_l, p_ls, ss_ls, rpm_1, rpm_2 = strike_data
         self.gcode.append("\n")
-        if (initial_pos[0] - self.position[0]) ** 2 + (
-            initial_pos[1] - self.position[1]
-        ) ** 2 >= (hs_opt_ls * w_l) ** 2:
-            self.gcode.append(f"G1 Z{self.safe_height} F{self.not_print_speed}\n")
+        # if (initial_pos[0] - self.position[0]) ** 2 + (
+        #     initial_pos[1] - self.position[1]
+        # ) ** 2 >= (hs_opt_ls * w_l) ** 2:
+            # self.gcode.append(f"G1 Z{self.safe_height} F{self.not_print_speed}\n")
         self.gcode.append(f"G1 X{initial_pos[0]} Y{initial_pos[1]}\n")
         self.gcode.append(f"G1 Z{initial_pos[2]}\n")
         self.gcode.append("G4 P0.001\n")
@@ -718,5 +719,5 @@ class FileDrop(QLabel):
 
 app = QApplication(sys.argv)
 window = MainWindow()
-window.showMaximized()
+window.show()
 sys.exit(app.exec())
