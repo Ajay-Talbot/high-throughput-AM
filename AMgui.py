@@ -765,7 +765,7 @@ class AMGcodeCalculator(QWidget):
                             )
                             self.gcode.append(
                                 f"{self.mscode['gcode_set_dispenser_speed'].format(i=self.ac1_input.text(), v=self.gfr_input.text())} ; Argon carrier gas flow rate hopper 1\n"
-                            )  # TODO : add different argon gas flow rate?
+                            )
                             self.gcode.append(
                                 f"{self.mscode['gcode_set_dispenser_speed'].format(i=self.h2_input.text(), v=rpm_2)} ; Feed rate for hopper 2\n"
                             )
@@ -774,7 +774,7 @@ class AMGcodeCalculator(QWidget):
                             )
                             self.gcode.append(
                                 f"G4 P{self.wt_input} ; Powder stabilization\n"
-                            )  # TODO : waiting time
+                            )
                             last_rpm_1 = rpm_1
                             last_rpm_2 = rpm_2
                         if vertical:
@@ -1124,7 +1124,7 @@ class AMGcodeCalculator(QWidget):
             "gcode_laser_on": self.settings.value("gcode_laser_on", "M201 (EMON)"),
             "gcode_laser_off": self.settings.value("gcode_laser_off", "M201 (EMOFF)"),
             "gcode_laser_power": self.settings.value("gcode_laser_power", "M201 (SDC {p})"),
-            "gcode_aimingbeam_on": self.settings.value("M201 (ABN)", "gcode_aimingbeam_on"), # TODO
+            "gcode_aimingbeam_on": self.settings.value("gcode_aimingbeam_on", "M201 (ABN)"),
             "gcode_aimingbeam_off": self.settings.value("gcode_aimingbeam_off", "M201 (ABF)"),
             "gcode_set_dispenser_speed": self.settings.value("gcode_set_dispenser_speed", "M205 (H_{i}_V_{v})"),
         }
