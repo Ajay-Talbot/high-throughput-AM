@@ -67,24 +67,22 @@ class AMGcodeCalculator(QWidget):
             "gcode_set_dispenser_speed": lambda i, rpm: f"M205 (H_{i}_V_{rpm})",
         }
 
-        self.main_layout = QGridLayout(main_widget)
-        # self.main_layout.setContentsMargins(30, 10, 30, 10)
-        # self.main_layout.setSpacing(3)
-        # self.main_layout.setColumnMinimumWidth(1, 500)
-        # self.main_layout.setColumnStretch(0, 1)
-        # self.main_layout.setColumnStretch(2, 4)
-        # self.main_layout.setRowMinimumHeight(2, 150)
+        ### Main page ###
 
-        title = QLabel("AM G-Code Generator\n")
-        title.setStyleSheet("QLabel {font-size: 18px; font-weight: 700;}")
-        self.main_layout.addWidget(title, 0, 0, Qt.AlignmentFlag.AlignTop)
+        self.main_layout = QHBoxLayout(main_widget)
+        self.main_layout.setSpacing(3)
+        self.main_layout.setContentsMargins(20, 0, 20, 20)
 
         side_tab = QVBoxLayout()
         # side_tab.setSpacing(0)
 
+        title = QLabel("AM G-Code Generator\n")
+        title.setStyleSheet("QLabel {font-size: 18px; font-weight: 700;}")
+        side_tab.addWidget(title, 1)
+
         self.filedrop = FileDrop()
         # filedrop.setFixedWidth(400)
-        side_tab.addWidget(self.filedrop)
+        side_tab.addWidget(self.filedrop, 2)
         # side_tab.addSpacing(10)
 
         shape_layout = QHBoxLayout()
@@ -94,7 +92,7 @@ class AMGcodeCalculator(QWidget):
         self.shape_combobox.currentTextChanged.connect(self.change_layout_shape)
         shape_layout.addWidget(shape_label)
         shape_layout.addWidget(self.shape_combobox, Qt.AlignmentFlag.AlignLeft)
-        side_tab.addLayout(shape_layout)
+        side_tab.addLayout(shape_layout, 1)
 
         self.stack = QStackedWidget()
         self.widget_track = self.create_widget_track()
@@ -105,7 +103,7 @@ class AMGcodeCalculator(QWidget):
         self.stack.addWidget(self.widget_cube)
         self.stack.setCurrentWidget(self.widget_track)
 
-        side_tab.addWidget(self.stack)
+        side_tab.addWidget(self.stack, 4)
 
         substrate_layout = QHBoxLayout()
         substrate_label = QLabel("Select the shape of the substrate: ")
@@ -123,27 +121,30 @@ class AMGcodeCalculator(QWidget):
         self.stack_s.setCurrentWidget(self.widget_rectangle)
 
         substrate_layout.addWidget(self.stack_s)
-        side_tab.addLayout(substrate_layout)
-
-        self.main_layout.addLayout(side_tab, 1, 0)
+        side_tab.addLayout(substrate_layout, 4)
 
         wrap_buttons = QHBoxLayout()
 
-        calculate = QPushButton("Calculate configuration")
-        calculate.setFixedWidth(150)
-        calculate.clicked.connect(self.calculate_positions)
-        wrap_buttons.addWidget(calculate)
+        wrap_buttons.addStretch(1)
 
-        generate = QPushButton("Generate GCode")
-        generate.setFixedWidth(150)
-        generate.clicked.connect(self.generate_gcode)
-        wrap_buttons.addWidget(generate)
+        calculate = QPushButton("Calculate configuration", clicked=self.calculate_positions)
+        wrap_buttons.addWidget(calculate, 2)
 
-        self.main_layout.addLayout(wrap_buttons, 2, 0)
+        wrap_buttons.addStretch(1)
+
+        generate = QPushButton("Generate GCode", clicked=self.generate_gcode)
+        wrap_buttons.addWidget(generate, 2)
+
+        wrap_buttons.addStretch(1)
+
+        side_tab.addLayout(wrap_buttons, 1)
+
+        self.main_layout.addLayout(side_tab, 3)
+
+        display_tab = QVBoxLayout()
 
         self.figure = Figure()
         self.canvas = FigureCanvas(self.figure)
-        # self.canvas.setMinimumSize(400, 400)
 
         self.canvas.mpl_connect("button_press_event", self.on_click)
 
@@ -151,15 +152,14 @@ class AMGcodeCalculator(QWidget):
         self.ax.grid(
             True, which="both", color="gray", linestyle="--", linewidth=0.5, alpha=0.5
         )
-        self.ax.set_title("Printing Configuration", fontsize=10, pad=10)
+        self.ax.set_title("Printing Configuration", fontdict={"fontsize": 12, "fontweight": 700})
         self.ax.set_xlabel("X Axis (mm)", fontsize=8)
         self.ax.set_ylabel("Y Axis (mm)", fontsize=8)
         self.ax.tick_params(labelsize=8)
         self.ax.set_aspect("equal")
-        # self.figure.subplots_adjust(bottom=0.2, left=0.2)
         self.canvas.draw()
 
-        self.main_layout.addWidget(self.canvas, 0, 1, 2, 1)
+        display_tab.addWidget(self.canvas, 8)
 
         self.display = QLabel()
         self.display.setStyleSheet(
@@ -169,79 +169,90 @@ class AMGcodeCalculator(QWidget):
             Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft
         )
         self.display.setWordWrap(True)
-        self.main_layout.addWidget(self.display, 2, 1)
+        display_tab.addWidget(self.display, 2)
 
+        self.main_layout.addLayout(display_tab, 7)
+
+        ### Settings layout ###
 
         setting_widget = QWidget()
         tab_widget.addTab(setting_widget, "Machine settings")
 
         settings_layout = QVBoxLayout(setting_widget)
+        settings_layout.setSpacing(3)
+        settings_layout.setContentsMargins(20, 0, 20, 20)
         self.settings = QSettings("AMGcodeGenerator", "Settings")
 
         # title2 = QLabel("Machine Settings")
-        # title2.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
         # title2.setStyleSheet("QLabel {font-size: 18px; font-weight: 700;}")
-        # settings_layout.addWidget(title2)
+        # settings_layout.addWidget(title2, 1)
 
         dir_layout = QHBoxLayout()
         dir_label = QLabel("Save directory: ")
-        dir_layout.addWidget(dir_label)
+        dir_layout.addWidget(dir_label, 1)
         self.dir_input = QLineEdit()
-        self.dir_input.setText(self.settings.value("save_directory", f"{Path.home() / 'Downloads'}"))
-        dir_layout.addWidget(self.dir_input)
-        dir_button = QPushButton("Click to browse...")
-        dir_button.clicked.connect(self.browse)
-        dir_layout.addWidget(dir_button)
+        self.dir_input.setText(
+            self.settings.value("save_directory", f"{Path.home() / 'Downloads'}")
+        )
+        dir_layout.addWidget(self.dir_input, 3)
+        dir_button = QPushButton("Click to browse...", clicked=self.browse)
+        dir_layout.addWidget(dir_button, 1)
+        dir_layout.addStretch(5)
         settings_layout.addLayout(dir_layout)
 
         sh_layout = QHBoxLayout()
         sh_label = QLabel("Safe height (mm): ")
-        sh_layout.addWidget(sh_label)
+        sh_layout.addWidget(sh_label, 1)
         self.sh_input = QLineEdit()
         self.sh_input.setText(self.settings.value("safe_height", "25"))
-        sh_layout.addWidget(self.sh_input)
+        sh_layout.addWidget(self.sh_input, 1)
+        sh_layout.addStretch(8)
         settings_layout.addLayout(sh_layout)
 
         nps_layout = QHBoxLayout()
         nps_label = QLabel("Not printing speed (mm/s): ")
-        nps_layout.addWidget(nps_label)
+        nps_layout.addWidget(nps_label, 1)
         self.nps_input = QLineEdit()
         self.nps_input.setText(self.settings.value("not_print_speed", "3900"))
-        nps_layout.addWidget(self.nps_input)
+        nps_layout.addWidget(self.nps_input, 1)
+        nps_layout.addStretch(8)
         settings_layout.addLayout(nps_layout)
 
         # Laser absolute power
         # lsp_layout = QHBoxLayout()
         # lsp_label = QLabel("Laser power:")
-        # lsp_layout.addWidget(lsp_label)
+        # lsp_layout.addWidget(lsp_label, 1)
         # self.lsp_input = QLineEdit()
         # self.lsp_input.setText(self.settings.value("laser_power", "1000"))
-        # lsp_layout.addWidget(self.lsp_input)
+        # lsp_layout.addWidget(self.lsp_input, 1)
+        # lsp_layout.addStretch(8)
         # settings_layout.addLayout(lsp_layout)
 
         gfr_layout = QHBoxLayout()
         gfr_label = QLabel("Gas flow rate: ")
-        gfr_layout.addWidget(gfr_label)
+        gfr_layout.addWidget(gfr_label, 1)
         self.gfr_input = QLineEdit()
         self.gfr_input.setText(self.settings.value("gas_flow_rate", "2.5"))
-        gfr_layout.addWidget(self.gfr_input)
+        gfr_layout.addWidget(self.gfr_input, 1)
+        gfr_layout.addStretch(8)
         settings_layout.addLayout(gfr_layout)
 
         wt_layout = QHBoxLayout()
         wt_label = QLabel("Waiting time after material feed rate change (s): ")
-        wt_layout.addWidget(wt_label)
+        wt_layout.addWidget(wt_label, 2)
         self.wt_input = QLineEdit()
         self.wt_input.setText(self.settings.value("waiting_time", "30"))
-        wt_layout.addWidget(self.wt_input)
+        wt_layout.addWidget(self.wt_input, 1)
+        wt_layout.addStretch(7)
         settings_layout.addLayout(wt_layout)
 
         button_layout = QHBoxLayout()
-        reset_button = QPushButton("Reset")
-        reset_button.clicked.connect(self.reset_settings)
-        button_layout.addWidget(reset_button)
-        save_button = QPushButton("Save")
-        save_button.clicked.connect(self.save_settings)
-        button_layout.addWidget(save_button)
+        button_layout.addStretch(1)
+        reset_button = QPushButton("Reset", clicked=self.reset_settings)
+        button_layout.addWidget(reset_button, 1)
+        save_button = QPushButton("Save", clicked=self.save_settings)
+        button_layout.addWidget(save_button, 1)
+        button_layout.addStretch(7)
         settings_layout.addLayout(button_layout)
 
     def plot(self):
@@ -249,7 +260,7 @@ class AMGcodeCalculator(QWidget):
         self.ax.grid(
             True, which="both", color="gray", linestyle="--", linewidth=0.5, alpha=0.5
         )
-        self.ax.set_title("Printing Configuration", fontsize=10, pad=10)
+        self.ax.set_title("Printing Configuration", fontdict={"fontsize": 12, "fontweight": 700})
         self.ax.set_xlabel("X Axis (mm)", fontsize=8, labelpad=8)
         self.ax.set_ylabel("Y Axis (mm)", fontsize=8, labelpad=8)
         self.ax.tick_params(labelsize=8)
@@ -321,7 +332,6 @@ class AMGcodeCalculator(QWidget):
     def create_widget_track(self):
         w = QWidget()
         layout = QGridLayout(w)
-        # layout.setSpacing(1)
 
         label1 = QLabel("Length of the tracks (mm): ")
         self.track_length = QLineEdit()
@@ -352,7 +362,6 @@ class AMGcodeCalculator(QWidget):
     def create_widget_wall(self):
         w = QWidget()
         layout = QGridLayout(w)
-        # layout.setSpacing(1)
 
         label1 = QLabel("Length of the walls (mm): ")
         self.wall_length = QLineEdit()
@@ -389,7 +398,6 @@ class AMGcodeCalculator(QWidget):
     def create_widget_cube(self):
         w = QWidget()
         layout = QGridLayout(w)
-        # layout.setSpacing(1)
 
         label1 = QLabel("Length of the cubes (mm): ")
         self.cube_length = QLineEdit()
@@ -434,7 +442,6 @@ class AMGcodeCalculator(QWidget):
     def create_widget_rectangle(self):
         w = QWidget()
         layout = QGridLayout(w)
-        # layout.setSpacing(1)
 
         width_label = QLabel("Substrate width (mm): ")
         self.substrate_width = QLineEdit()
@@ -459,7 +466,6 @@ class AMGcodeCalculator(QWidget):
     def create_widget_circle(self):
         w = QWidget()
         layout = QGridLayout(w)
-        # layout.setSpacing(1)
 
         radius_label = QLabel("Substrate radius (mm): ")
         self.substrate_radius = QLineEdit()
@@ -597,21 +603,30 @@ class AMGcodeCalculator(QWidget):
             self.gcode.append("T11 G43 H11 M6 ; set tool as T11, perform tool change\n")
             # self.gcode.append("G1 Z5 F5000 ; move nozzle up 5mm\n")
             self.gcode.append(
-                f"{self.mscode["gcode_start_flow"](2)} ; Starts fume extractor\n"
+                f"{self.mscode['gcode_start_flow'](2)} ; Starts fume extractor\n"
             )
-            self.gcode.append(f"{self.mscode["gcode_start_flow"](3)} ; Starts argon purge gas\n")
+            self.gcode.append(
+                f"{self.mscode['gcode_start_flow'](3)} ; Starts argon purge gas\n"
+            )
             self.gcode.append("G4 P0.001 ; Added because G1 being skipped\n")
             self.gcode.append(f"{self.mscode['gcode_laser_on']} ; Turn on the laser\n")
 
             csv_data = []
-            with open(self.filedrop.file_path, "r") as f:
-                csv_reader = csv.reader(f)
-                first_line = True
-                for row in csv_reader:
-                    if first_line:
-                        first_line = not first_line
-                    else:
-                        csv_data.append(list(float(x) for x in row))
+            try:
+                with open(self.filedrop.file_path, "r") as f:
+                    csv_reader = csv.reader(f)
+                    first_line = True
+                    for row in csv_reader:
+                        if first_line:
+                            first_line = not first_line
+                        else:
+                            csv_data.append(list(float(x) for x in row))
+            except PermissionError:
+                self.display.setText("Error: Permission denied. Cannot access CSV file")
+            except FileNotFoundError:
+                self.display.setText("Error: CSV file not found")
+            except Exception as e:
+                self.display.setText(f"Error: An unexpected error occurred: {e}")
 
             for i, position in enumerate(self.positions):
                 self.gcode.append(f"\n;===Starting {shape} {i + 1}===\n")
@@ -620,28 +635,28 @@ class AMGcodeCalculator(QWidget):
                 vertical = True
                 x_direction = True
                 y_direction = True
-                self.gcode.append(f"G1 Z{self.sh_input.text()} F{self.nps_input.text()}\n")
+                self.gcode.append(
+                    f"G1 Z{self.sh_input.text()} F{self.nps_input.text()}\n"
+                )
                 while curr_height <= height:
                     curr_length = 0
                     while curr_length <= hlength:  # TODO : assumes hlength == v_length
                         _, r_id, hs_opt_ls, w_l, p_ls, ss_ls, rpm_1, rpm_2, t_ls = (
                             csv_data[idx % len(csv_data)]
                         )
-                        if (
-                            rpm_1 != last_rpm_1 or rpm_2 != last_rpm_2
-                        ):
+                        if rpm_1 != last_rpm_1 or rpm_2 != last_rpm_2:
                             self.gcode.append("\n;===Adjusting deposition rate===")
                             self.gcode.append(
-                                f"\n{self.mscode["gcode_set_dispenser_speed"](0, rpm_1)} ; Feed rate for hopper 1\n"
+                                f"\n{self.mscode['gcode_set_dispenser_speed'](0, rpm_1)} ; Feed rate for hopper 1\n"
                             )
                             self.gcode.append(
-                                f"{self.mscode["gcode_set_dispenser_speed"](1, self.gfr_input.text())} ; Argon carrier gas flow rate hopper 1\n"
+                                f"{self.mscode['gcode_set_dispenser_speed'](1, self.gfr_input.text())} ; Argon carrier gas flow rate hopper 1\n"
                             )  # TODO : add different argon gas flow rate?
                             self.gcode.append(
-                                f"{self.mscode["gcode_set_dispenser_speed"](2, rpm_2)} ; Feed rate for hopper 2\n"
+                                f"{self.mscode['gcode_set_dispenser_speed'](2, rpm_2)} ; Feed rate for hopper 2\n"
                             )
                             self.gcode.append(
-                                f"{self.mscode["gcode_set_dispenser_speed"](3, self.gfr_input.text())} ; Argon carrier gas flow rate hopper 2\n"
+                                f"{self.mscode['gcode_set_dispenser_speed'](3, self.gfr_input.text())} ; Argon carrier gas flow rate hopper 2\n"
                             )
                             self.gcode.append(
                                 f"G4 P{self.wt_input} ; Powder stabilization\n"
@@ -715,28 +730,51 @@ class AMGcodeCalculator(QWidget):
             self.gcode.append(
                 f"\n{self.mscode['gcode_laser_off']} ; Turn off the laser\n"
             )
-            self.gcode.append(f"{self.mscode["gcode_stop_flow"](3)} ; Stops Argon purge gas\n")
-            self.gcode.append(f"{self.mscode["gcode_stop_flow"](2)} ; Stops fume extractor\n")
-            self.gcode.append(f"{self.mscode["gcode_set_dispenser_speed"](0, 0)} ; Turn off hopper 1\n")
-            self.gcode.append(f"{self.mscode["gcode_set_dispenser_speed"](1, 0)} ; Turn off hopper 1 carrier gas\n")
-            self.gcode.append(f"{self.mscode["gcode_set_dispenser_speed"](2, 0)} ; Turn off hopper 2\n")
-            self.gcode.append(f"{self.mscode["gcode_set_dispenser_speed"](3, 0)} ; Turn off hopper 2 carrier gas\n")
+            self.gcode.append(
+                f"{self.mscode['gcode_stop_flow'](3)} ; Stops Argon purge gas\n"
+            )
+            self.gcode.append(
+                f"{self.mscode['gcode_stop_flow'](2)} ; Stops fume extractor\n"
+            )
+            self.gcode.append(
+                f"{self.mscode['gcode_set_dispenser_speed'](0, 0)} ; Turn off hopper 1\n"
+            )
+            self.gcode.append(
+                f"{self.mscode['gcode_set_dispenser_speed'](1, 0)} ; Turn off hopper 1 carrier gas\n"
+            )
+            self.gcode.append(
+                f"{self.mscode['gcode_set_dispenser_speed'](2, 0)} ; Turn off hopper 2\n"
+            )
+            self.gcode.append(
+                f"{self.mscode['gcode_set_dispenser_speed'](3, 0)} ; Turn off hopper 2 carrier gas\n"
+            )
 
-            with open(Path(self.dir_input.text()) / f"{self.shape_combobox.currentText()}s_{self.substrate_combobox.currentText()}_({self.filedrop.file_path.stem}).gcode", "w") as f:
-                for row in self.gcode:
-                    f.write(row)
-            self.display.setText("G-code successfully generated")
+            try:
+                with open(
+                    Path(self.dir_input.text())
+                    / f"{self.shape_combobox.currentText()}s_{self.substrate_combobox.currentText()}_({self.filedrop.file_path.stem}).gcode",
+                    "w",
+                ) as f:
+                    for row in self.gcode:
+                        f.write(row)
+                self.display.setText("G-code successfully generated")
+            except PermissionError:
+                self.display.setText("Error: Permission denied. Cannot access Save directory")
+            except FileNotFoundError:
+                self.display.setText("Error: Save directory not found")
+            except Exception as e:
+                self.display.setText(f"Error: An unexpected error occurred: {e}")
 
     def strike_gcode(self, initial_pos, strike_data, strike_size, strike_direction):
         p_ls, ss_ls = strike_data
         self.gcode.append("\n")
-        # if (abs(initial_pos[0] - self.position[0]) >= (hs_opt_ls * w_l) 
+        # if (abs(initial_pos[0] - self.position[0]) >= (hs_opt_ls * w_l)
         # or abs(initial_pos[1] - self.position[1]) >= (hs_opt_ls * w_l)):
         #     self.gcode.append(f"G1 Z{self.sh_input.text()} F{self.nps_input.text()}\n")
         self.gcode.append(f"G1 X{initial_pos[0]} Y{initial_pos[1]}\n")
         self.gcode.append(f"G1 Z{initial_pos[2]}\n")
         self.gcode.append("G4 P0.001\n")
-        self.gcode.append(f"{self.mscode["gcode_laser_power"](p_ls)}\n")
+        self.gcode.append(f"{self.mscode['gcode_laser_power'](p_ls)}\n")
         if strike_direction == "+x":
             self.gcode.append(f"G1 X{initial_pos[0] + strike_size} F{ss_ls}\n")
             self.position = (
@@ -775,7 +813,9 @@ class AMGcodeCalculator(QWidget):
         self.dir_input.setText(str(Path(file_str)))
 
     def reset_settings(self):
-        self.dir_input.setText(self.settings.value("save_directory", f"{Path.home() / 'Downloads'}"))
+        self.dir_input.setText(
+            self.settings.value("save_directory", f"{Path.home() / 'Downloads'}")
+        )
         self.sh_input.setText(self.settings.value("safe_height", "25"))
         self.nps_input.setText(self.settings.value("not_print_speed", "3900"))
         # self.lsp_input.setText(self.settings.value("laser_power", "1000"))
