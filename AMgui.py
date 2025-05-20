@@ -18,6 +18,7 @@ from PyQt6.QtWidgets import (
     QLabel,
     QPushButton,
     QLineEdit,
+    QCheckBox,
     QComboBox,
     QListWidget,
     QListWidgetItem,
@@ -62,7 +63,7 @@ class AMGcodeCalculator(QWidget):
 
         self.main_layout = QHBoxLayout(main_widget)
         self.main_layout.setSpacing(3)
-        self.main_layout.setContentsMargins(20, 0, 20, 20)
+        self.main_layout.setContentsMargins(20, 10, 20, 20)
 
         side_tab = QVBoxLayout()
 
@@ -93,6 +94,9 @@ class AMGcodeCalculator(QWidget):
 
         side_tab.addWidget(self.stack, 4)
 
+        self.horizontal = QCheckBox("Print horizontally")
+        side_tab.addWidget(self.horizontal, 1)
+
         substrate_layout = QHBoxLayout()
         substrate_label = QLabel("Select the shape of the substrate: ")
         self.substrate_combobox = QComboBox()
@@ -115,7 +119,9 @@ class AMGcodeCalculator(QWidget):
 
         wrap_buttons.addStretch(1)
 
-        calculate = QPushButton("Calculate configuration", clicked=self.calculate_positions)
+        calculate = QPushButton(
+            "Calculate configuration", clicked=self.calculate_positions
+        )
         wrap_buttons.addWidget(calculate, 2)
 
         wrap_buttons.addStretch(1)
@@ -142,7 +148,9 @@ class AMGcodeCalculator(QWidget):
         self.ax.grid(
             True, which="both", color="gray", linestyle="--", linewidth=0.5, alpha=0.5
         )
-        self.ax.set_title("Printing Configuration", fontdict={"fontsize": 12, "fontweight": 700})
+        self.ax.set_title(
+            "Printing Configuration", fontdict={"fontsize": 12, "fontweight": 700}
+        )
         self.ax.set_xlabel("X Axis (mm)", fontsize=8)
         self.ax.set_ylabel("Y Axis (mm)", fontsize=8)
         self.ax.tick_params(labelsize=8)
@@ -167,7 +175,7 @@ class AMGcodeCalculator(QWidget):
 
         settings_layout = QVBoxLayout(setting_widget)
         settings_layout.setSpacing(3)
-        settings_layout.setContentsMargins(20, 0, 20, 20)
+        settings_layout.setContentsMargins(20, 10, 20, 20)
         self.settings = QSettings("AMGcodeGenerator", "Settings")
 
         title2 = QLabel("Machine Settings")
@@ -246,10 +254,18 @@ class AMGcodeCalculator(QWidget):
             "gcode_stop_flow": self.settings.value("gcode_stop_flow", "M65 P{i}"),
             "gcode_laser_on": self.settings.value("gcode_laser_on", "M201 (EMON)"),
             "gcode_laser_off": self.settings.value("gcode_laser_off", "M201 (EMOFF)"),
-            "gcode_laser_power": self.settings.value("gcode_laser_power", "M201 (SDC {p})"),
-            "gcode_aimingbeam_on": self.settings.value("gcode_aimingbeam_on", "M201 (ABN)"), # TODO
-            "gcode_aimingbeam_off": self.settings.value("gcode_aimingbeam_off", "M201 (ABF)"),
-            "gcode_set_dispenser_speed": self.settings.value("gcode_set_dispenser_speed", "M205 (H_{i}_V_{v})"),
+            "gcode_laser_power": self.settings.value(
+                "gcode_laser_power", "M201 (SDC {p})"
+            ),
+            "gcode_aimingbeam_on": self.settings.value(
+                "gcode_aimingbeam_on", "M201 (ABN)"
+            ),  # TODO
+            "gcode_aimingbeam_off": self.settings.value(
+                "gcode_aimingbeam_off", "M201 (ABF)"
+            ),
+            "gcode_set_dispenser_speed": self.settings.value(
+                "gcode_set_dispenser_speed", "M205 (H_{i}_V_{v})"
+            ),
         }
 
         fe_layout = QHBoxLayout()
@@ -361,7 +377,9 @@ class AMGcodeCalculator(QWidget):
         self.ax.grid(
             True, which="both", color="gray", linestyle="--", linewidth=0.5, alpha=0.5
         )
-        self.ax.set_title("Printing Configuration", fontdict={"fontsize": 12, "fontweight": 700})
+        self.ax.set_title(
+            "Printing Configuration", fontdict={"fontsize": 12, "fontweight": 700}
+        )
         self.ax.set_xlabel("X Axis (mm)", fontsize=8, labelpad=8)
         self.ax.set_ylabel("Y Axis (mm)", fontsize=8, labelpad=8)
         self.ax.tick_params(labelsize=8)
@@ -392,19 +410,29 @@ class AMGcodeCalculator(QWidget):
         shape = self.shape_combobox.currentText()
         for xy in self.positions:
             if shape == "Single Track":
+                final_xy = (
+                    (xy[0] + float(self.track_length.text()), xy[1])
+                    if self.horizontal.isChecked()
+                    else (xy[0], xy[1] + float(self.track_length.text()))
+                )
                 self.ax.add_line(
                     plt.Line2D(
-                        (xy[0], xy[0]),
-                        (xy[1], xy[1] + float(self.track_length.text())),
+                        (xy[0], final_xy[0]),
+                        (xy[1], final_xy[1]),
                         color="blue",
                         linewidth=2,
                     )
                 )
             elif shape == "Thin Wall":
+                final_xy = (
+                    (xy[0] + float(self.wall_length.text()), xy[1])
+                    if self.horizontal.isChecked()
+                    else (xy[0], xy[1] + float(self.wall_length.text()))
+                )
                 self.ax.add_line(
                     plt.Line2D(
-                        (xy[0], xy[0]),
-                        (xy[1], xy[1] + float(self.wall_length.text())),
+                        (xy[0], final_xy[0]),
+                        (xy[1], final_xy[1]),
                         color="blue",
                         linewidth=2,
                     )
@@ -429,6 +457,7 @@ class AMGcodeCalculator(QWidget):
 
     def on_click(self, event):
         self.display.addItem(f"Clicked at x={event.xdata}, y={event.ydata}")
+        self.display.scrollToBottom()
 
     def create_widget_track(self):
         w = QWidget()
@@ -592,14 +621,22 @@ class AMGcodeCalculator(QWidget):
         self.positions = []
         if self.shape_combobox.currentText() == "Single Track":
             num = int(self.track_num.text())
-            hlength = 0
-            vlength = float(self.track_length.text())
+            hlength = (
+                float(self.track_length.text()) if self.horizontal.isChecked() else 0
+            )
+            vlength = (
+                0 if self.horizontal.isChecked() else float(self.track_length.text())
+            )
             hdistance = float(self.track_hspacing.text())
             vdistance = float(self.track_vspacing.text())
         elif self.shape_combobox.currentText() == "Thin Wall":
             num = int(self.wall_num.text())
-            hlength = 0
-            vlength = float(self.wall_length.text())
+            hlength = (
+                float(self.wall_length.text()) if self.horizontal.isChecked() else 0
+            )
+            vlength = (
+                0 if self.horizontal.isChecked() else float(self.wall_length.text())
+            )
             hdistance = float(self.wall_hspacing.text())
             vdistance = float(self.wall_vspacing.text())
         elif self.shape_combobox.currentText() == "Cube":
@@ -676,12 +713,24 @@ class AMGcodeCalculator(QWidget):
         elif self.calculate_positions():
             shape = self.shape_combobox.currentText()
             if shape == "Single Track":
-                hlength = 0
-                vlength = float(self.track_length.text())
+                hlength = (
+                    float(self.track_length.text())
+                    if self.horizontal.isChecked()
+                    else 0
+                )
+                vlength = (
+                    0
+                    if self.horizontal.isChecked()
+                    else float(self.track_length.text())
+                )
                 height = 0
             elif shape == "Thin Wall":
-                hlength = 0
-                vlength = float(self.wall_length.text())
+                hlength = (
+                    float(self.wall_length.text()) if self.horizontal.isChecked() else 0
+                )
+                vlength = (
+                    0 if self.horizontal.isChecked() else float(self.wall_length.text())
+                )
                 height = float(self.wall_height.text())
             elif shape == "Cube":
                 hlength = float(self.cube_length.text())
@@ -727,7 +776,9 @@ class AMGcodeCalculator(QWidget):
                         else:
                             csv_data.append(list(float(x) for x in row))
             except PermissionError:
-                error = QListWidgetItem("Error: Permission denied. Cannot access CSV file")
+                error = QListWidgetItem(
+                    "Error: Permission denied. Cannot access CSV file"
+                )
                 error.setForeground(QColor("#ff0000cc"))
                 self.display.addItem(error)
                 self.display.scrollToBottom()
@@ -746,7 +797,7 @@ class AMGcodeCalculator(QWidget):
                 self.gcode.append(f"\n;===Starting {shape} {i + 1}===\n")
                 x, y, z = position
                 curr_height = 0
-                vertical = True
+                vertical = not self.horizontal.isChecked()
                 x_direction = True
                 y_direction = True
                 self.gcode.append(
@@ -754,7 +805,9 @@ class AMGcodeCalculator(QWidget):
                 )
                 while curr_height <= height:
                     curr_length = 0
-                    while curr_length <= hlength:  # TODO : assumes hlength == v_length
+                    while curr_length <= (
+                        hlength * vertical + vlength * (not vertical)
+                    ):  # TODO : assumes hlength == v_length
                         _, r_id, hs_opt_ls, w_l, p_ls, ss_ls, rpm_1, rpm_2, t_ls = (
                             csv_data[idx % len(csv_data)]
                         )
@@ -773,7 +826,7 @@ class AMGcodeCalculator(QWidget):
                                 f"{self.mscode['gcode_set_dispenser_speed'].format(i=self.ac2_input.text(), v=self.gfr_input.text())} ; Argon carrier gas flow rate hopper 2\n"
                             )
                             self.gcode.append(
-                                f"G4 P{self.wt_input} ; Powder stabilization\n"
+                                f"G4 P{self.wt_input.text()} ; Powder stabilization\n"
                             )
                             last_rpm_1 = rpm_1
                             last_rpm_2 = rpm_2
@@ -876,7 +929,9 @@ class AMGcodeCalculator(QWidget):
                 self.display.addItem(success)
                 self.display.scrollToBottom()
             except PermissionError:
-                error = QListWidgetItem("Error: Permission denied. Cannot access Save directory")
+                error = QListWidgetItem(
+                    "Error: Permission denied. Cannot access Save directory"
+                )
                 error.setForeground(QColor("#ff0000cc"))
                 self.display.addItem(error)
                 self.display.scrollToBottom()
@@ -941,10 +996,12 @@ class AMGcodeCalculator(QWidget):
     def open_dialog(self, item):
         if item.text() == "START FLOW":
             dialog = QDialog()
-            dialog.setContentsMargins(20, 0, 20, 20)
+            dialog.setContentsMargins(20, 10, 20, 20)
             dialog.setWindowTitle("START FLOW")
             layout = QVBoxLayout(dialog)
-            description = QLabel("Defines the start of the fume extractor and argon purge gas\n - {i} : is the index representing either the fume extractor or the argon purge gas")
+            description = QLabel(
+                "Defines the start of the fume extractor and argon purge gas\n - {i} : is the index representing either the fume extractor or the argon purge gas"
+            )
             description.setWordWrap(True)
             description.setStyleSheet("QLabel { border: 1px solid gray }")
             layout.addWidget(description, 2)
@@ -955,17 +1012,25 @@ class AMGcodeCalculator(QWidget):
             buttons.addStretch(2)
             cancel = QPushButton("Cancel", clicked=dialog.close)
             buttons.addWidget(cancel, 1)
-            ok = QPushButton("Ok", clicked=lambda: (self.ok("gcode_start_flow", ms_code.text()), dialog.close()))
+            ok = QPushButton(
+                "Ok",
+                clicked=lambda: (
+                    self.ok("gcode_start_flow", ms_code.text()),
+                    dialog.close(),
+                ),
+            )
             buttons.addWidget(ok, 1)
             layout.addLayout(buttons, 1)
             dialog.exec()
 
         elif item.text() == "STOP FLOW":
             dialog = QDialog()
-            dialog.setContentsMargins(20, 0, 20, 20)
+            dialog.setContentsMargins(20, 10, 20, 20)
             dialog.setWindowTitle("STOP FLOW")
             layout = QVBoxLayout(dialog)
-            description = QLabel("Defines the stop of the fume extractor and argon purge gas\n - {i} : is the index representing either the fume extractor or the argon purge gas")
+            description = QLabel(
+                "Defines the stop of the fume extractor and argon purge gas\n - {i} : is the index representing either the fume extractor or the argon purge gas"
+            )
             description.setWordWrap(True)
             description.setStyleSheet("QLabel { border: 1px solid gray }")
             layout.addWidget(description, 2)
@@ -976,14 +1041,20 @@ class AMGcodeCalculator(QWidget):
             buttons.addStretch(2)
             cancel = QPushButton("Cancel", clicked=dialog.close)
             buttons.addWidget(cancel, 1)
-            ok = QPushButton("Ok", clicked=lambda: (self.ok("gcode_stop_flow", ms_code.text()), dialog.close()))
+            ok = QPushButton(
+                "Ok",
+                clicked=lambda: (
+                    self.ok("gcode_stop_flow", ms_code.text()),
+                    dialog.close(),
+                ),
+            )
             buttons.addWidget(ok, 1)
             layout.addLayout(buttons, 1)
             dialog.exec()
 
         elif item.text() == "LASER ON":
             dialog = QDialog()
-            dialog.setContentsMargins(20, 0, 20, 20)
+            dialog.setContentsMargins(20, 10, 20, 20)
             dialog.setWindowTitle("LASER ON")
             layout = QVBoxLayout(dialog)
             description = QLabel("Defines when the laser is powered on")
@@ -997,14 +1068,20 @@ class AMGcodeCalculator(QWidget):
             buttons.addStretch(2)
             cancel = QPushButton("Cancel", clicked=dialog.close)
             buttons.addWidget(cancel, 1)
-            ok = QPushButton("Ok", clicked=lambda: (self.ok("gcode_laser_on", ms_code.text()), dialog.close()))
+            ok = QPushButton(
+                "Ok",
+                clicked=lambda: (
+                    self.ok("gcode_laser_on", ms_code.text()),
+                    dialog.close(),
+                ),
+            )
             buttons.addWidget(ok, 1)
             layout.addLayout(buttons, 1)
             dialog.exec()
 
         elif item.text() == "LASER OFF":
             dialog = QDialog()
-            dialog.setContentsMargins(20, 0, 20, 20)
+            dialog.setContentsMargins(20, 10, 20, 20)
             dialog.setWindowTitle("LASER OFF")
             layout = QVBoxLayout(dialog)
             description = QLabel("Defines when the laser is powered off")
@@ -1018,17 +1095,25 @@ class AMGcodeCalculator(QWidget):
             buttons.addStretch(2)
             cancel = QPushButton("Cancel", clicked=dialog.close)
             buttons.addWidget(cancel, 1)
-            ok = QPushButton("Ok", clicked=lambda: (self.ok("gcode_laser_off", ms_code.text()), dialog.close()))
+            ok = QPushButton(
+                "Ok",
+                clicked=lambda: (
+                    self.ok("gcode_laser_off", ms_code.text()),
+                    dialog.close(),
+                ),
+            )
             buttons.addWidget(ok, 1)
             layout.addLayout(buttons, 1)
             dialog.exec()
 
         elif item.text() == "LASER POWER":
             dialog = QDialog()
-            dialog.setContentsMargins(20, 0, 20, 20)
+            dialog.setContentsMargins(20, 10, 20, 20)
             dialog.setWindowTitle("LASER POWER")
             layout = QVBoxLayout(dialog)
-            description = QLabel("Defines the power of the laser beam\n - {p} : is the percentage of the laser's full power")
+            description = QLabel(
+                "Defines the power of the laser beam\n - {p} : is the percentage of the laser's full power"
+            )
             description.setWordWrap(True)
             description.setStyleSheet("QLabel { border: 1px solid gray }")
             layout.addWidget(description, 2)
@@ -1039,14 +1124,20 @@ class AMGcodeCalculator(QWidget):
             buttons.addStretch(2)
             cancel = QPushButton("Cancel", clicked=dialog.close)
             buttons.addWidget(cancel, 1)
-            ok = QPushButton("Ok", clicked=lambda: (self.ok("gcode_laser_power", ms_code.text()), dialog.close()))
+            ok = QPushButton(
+                "Ok",
+                clicked=lambda: (
+                    self.ok("gcode_laser_power", ms_code.text()),
+                    dialog.close(),
+                ),
+            )
             buttons.addWidget(ok, 1)
             layout.addLayout(buttons, 1)
             dialog.exec()
 
         elif item.text() == "AIMINGBEAM ON":
             dialog = QDialog()
-            dialog.setContentsMargins(20, 0, 20, 20)
+            dialog.setContentsMargins(20, 10, 20, 20)
             dialog.setWindowTitle("AIMINGBEAM ON")
             layout = QVBoxLayout(dialog)
             description = QLabel("Defines when the aimingbeam is turned on")
@@ -1060,14 +1151,20 @@ class AMGcodeCalculator(QWidget):
             buttons.addStretch(2)
             cancel = QPushButton("Cancel", clicked=dialog.close)
             buttons.addWidget(cancel, 1)
-            ok = QPushButton("Ok", clicked=lambda: (self.ok("gcode_aimingbeam_on", ms_code.text()), dialog.close()))
+            ok = QPushButton(
+                "Ok",
+                clicked=lambda: (
+                    self.ok("gcode_aimingbeam_on", ms_code.text()),
+                    dialog.close(),
+                ),
+            )
             buttons.addWidget(ok, 1)
             layout.addLayout(buttons, 1)
             dialog.exec()
 
         elif item.text() == "AIMINGBEAM OFF":
             dialog = QDialog()
-            dialog.setContentsMargins(20, 0, 20, 20)
+            dialog.setContentsMargins(20, 10, 20, 20)
             dialog.setWindowTitle("AIMINGBEAM OFF")
             layout = QVBoxLayout(dialog)
             description = QLabel("Defines when the aimingbeam is turned off")
@@ -1081,17 +1178,25 @@ class AMGcodeCalculator(QWidget):
             buttons.addStretch(2)
             cancel = QPushButton("Cancel", clicked=dialog.close)
             buttons.addWidget(cancel, 1)
-            ok = QPushButton("Ok", clicked=lambda: (self.ok("gcode_aimingbeam_off", ms_code.text()), dialog.close()))
+            ok = QPushButton(
+                "Ok",
+                clicked=lambda: (
+                    self.ok("gcode_aimingbeam_off", ms_code.text()),
+                    dialog.close(),
+                ),
+            )
             buttons.addWidget(ok, 1)
             layout.addLayout(buttons, 1)
             dialog.exec()
 
         elif item.text() == "DISPENSER SPEED":
             dialog = QDialog()
-            dialog.setContentsMargins(20, 0, 20, 20)
+            dialog.setContentsMargins(20, 10, 20, 20)
             dialog.setWindowTitle("DISPENSER SPEED")
             layout = QVBoxLayout(dialog)
-            description = QLabel("Defines the hopper and argon flow speed\n - {i} : is the index representing the hopper_1, argon_carrier_1, hopper_2 or argon_carrier_2\n - {v} : is the velocity in [rpm] for the hoppers or [L/min] for argon flow")
+            description = QLabel(
+                "Defines the hopper and argon flow speed\n - {i} : is the index representing the hopper_1, argon_carrier_1, hopper_2 or argon_carrier_2\n - {v} : is the velocity in [rpm] for the hoppers or [L/min] for argon flow"
+            )
             description.setWordWrap(True)
             description.setStyleSheet("QLabel { border: 1px solid gray }")
             layout.addWidget(description, 2)
@@ -1101,7 +1206,13 @@ class AMGcodeCalculator(QWidget):
             buttons.addStretch(2)
             cancel = QPushButton("Cancel", clicked=dialog.close)
             buttons.addWidget(cancel, 1)
-            ok = QPushButton("Ok", clicked=lambda: (self.ok("gcode_set_dispenser_speed", ms_code.text()), dialog.close()))
+            ok = QPushButton(
+                "Ok",
+                clicked=lambda: (
+                    self.ok("gcode_set_dispenser_speed", ms_code.text()),
+                    dialog.close(),
+                ),
+            )
             buttons.addWidget(ok, 1)
             layout.addLayout(buttons, 1)
             dialog.exec()
@@ -1123,10 +1234,18 @@ class AMGcodeCalculator(QWidget):
             "gcode_stop_flow": self.settings.value("gcode_stop_flow", "M65 P{i}"),
             "gcode_laser_on": self.settings.value("gcode_laser_on", "M201 (EMON)"),
             "gcode_laser_off": self.settings.value("gcode_laser_off", "M201 (EMOFF)"),
-            "gcode_laser_power": self.settings.value("gcode_laser_power", "M201 (SDC {p})"),
-            "gcode_aimingbeam_on": self.settings.value("gcode_aimingbeam_on", "M201 (ABN)"),
-            "gcode_aimingbeam_off": self.settings.value("gcode_aimingbeam_off", "M201 (ABF)"),
-            "gcode_set_dispenser_speed": self.settings.value("gcode_set_dispenser_speed", "M205 (H_{i}_V_{v})"),
+            "gcode_laser_power": self.settings.value(
+                "gcode_laser_power", "M201 (SDC {p})"
+            ),
+            "gcode_aimingbeam_on": self.settings.value(
+                "gcode_aimingbeam_on", "M201 (ABN)"
+            ),
+            "gcode_aimingbeam_off": self.settings.value(
+                "gcode_aimingbeam_off", "M201 (ABF)"
+            ),
+            "gcode_set_dispenser_speed": self.settings.value(
+                "gcode_set_dispenser_speed", "M205 (H_{i}_V_{v})"
+            ),
         }
 
     def save_settings(self):
