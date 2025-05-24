@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 from PyQt6.QtCore import Qt, QSettings
-from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QMouseEvent, QColor
+from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QMouseEvent, QColor, QIcon
 from PyQt6.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -36,6 +36,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("AM G-Code Generator")
+        self.setWindowIcon(QIcon(".\\icon.ico"))
         self.resize(1200, 600)
 
         scroll_area = QScrollArea()
@@ -74,6 +75,12 @@ class AMGcodeCalculator(QWidget):
 
         self.filedrop = FileDrop()
         side_tab.addWidget(self.filedrop, 2)
+
+        self.include_heading = QCheckBox("CSV file with heading")
+        self.include_heading.setChecked(True)
+        side_tab.addWidget(self.include_heading, 1)
+
+        side_tab.addStretch(1)
 
         shape_layout = QHBoxLayout()
         shape_label = QLabel("Select the shape of the print: ")
@@ -451,7 +458,7 @@ class AMGcodeCalculator(QWidget):
                     patches.Rectangle(
                         (xy[0], xy[1]),
                         float(self.cube_length.text()),
-                        float(self.cube_height.text()),
+                        float(self.cube_length.text()),
                         edgecolor="blue",
                         facecolor="blue",
                     )
@@ -582,13 +589,13 @@ class AMGcodeCalculator(QWidget):
         w = QWidget()
         layout = QGridLayout(w)
 
-        width_label = QLabel("Substrate width (mm): ")
+        width_label = QLabel("Substrate width X (mm): ")
         self.substrate_width = QLineEdit()
         self.substrate_width.setText("65")
         layout.addWidget(width_label, 0, 0)
         layout.addWidget(self.substrate_width, 0, 1)
 
-        height_label = QLabel("Substrate height (mm): ")
+        height_label = QLabel("Substrate height Y (mm): ")
         self.substrate_height = QLineEdit()
         self.substrate_height.setText("45")
         layout.addWidget(height_label, 1, 0)
@@ -778,10 +785,19 @@ class AMGcodeCalculator(QWidget):
             try:
                 with open(self.filedrop.file_path, "r") as f:
                     csv_reader = csv.reader(f)
-                    first_line = True
+                    first_line = self.include_heading.isChecked()
                     for row in csv_reader:
                         if first_line:
                             first_line = not first_line
+                            if len(row) != 9 or len(row) != 10:
+                                error = QListWidgetItem(
+                                    f"Error: CSV not formatted correctly. Incorrect number of columns: {len(row)}"
+                                )
+                                error.setForeground(QColor("#ff0000cc"))
+                                self.display.addItem(error)
+                                self.display.scrollToBottom()
+                            else:
+                                self.display.addItem("Discarding first row of CSV file...")
                         else:
                             csv_data.append(list(float(x) for x in row))
             except PermissionError:
@@ -818,7 +834,7 @@ class AMGcodeCalculator(QWidget):
                         hlength * vertical + vlength * (not vertical)
                     ):  # TODO : assumes hlength == v_length
                         _, r_id, hs_opt_ls, w_l, p_ls, ss_ls, rpm_1, rpm_2, t_ls = (
-                            csv_data[idx % len(csv_data)]
+                            csv_data[idx % len(csv_data)] # TODO
                         )
                         if rpm_1 != last_rpm_1 or rpm_2 != last_rpm_2:
                             self.gcode.append("\n;===Adjusting deposition rate===")
@@ -1210,6 +1226,7 @@ class AMGcodeCalculator(QWidget):
             description.setStyleSheet("QLabel { border: 1px solid gray }")
             layout.addWidget(description, 2)
             ms_code = QLineEdit()
+            ms_code.setText(self.mscode["gcode_set_dispenser_speed"])
             layout.addWidget(ms_code, 1)
             buttons = QHBoxLayout()
             buttons.addStretch(2)
