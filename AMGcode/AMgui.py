@@ -1,9 +1,3 @@
-#######################################
-#         AM G-CODE GENERATOR         #
-#    Author: Arthur Jiun Wei Hwang    #
-#      Latest update: 23-05-2025      #
-#######################################
-
 import math
 import csv
 import sys
@@ -36,6 +30,12 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+
+#######################################
+#         AM G-CODE GENERATOR         #
+#    Author: Arthur Jiun Wei Hwang    #
+#      Latest update: 23-05-2025      #
+#######################################
 
 
 class MainWindow(QMainWindow):
@@ -801,7 +801,7 @@ class AMGcodeCalculator(QWidget):
                     for row in csv_reader:
                         if first_line:
                             first_line = not first_line
-                            if len(row) != 9 or len(row) != 10:
+                            if len(row) != 9 and len(row) != 10:
                                 error = QListWidgetItem(
                                     f"Error: CSV not formatted correctly. Incorrect number of columns: {len(row)}"
                                 )
@@ -809,7 +809,9 @@ class AMGcodeCalculator(QWidget):
                                 self.display.addItem(error)
                                 self.display.scrollToBottom()
                             else:
-                                self.display.addItem("Discarding first row of CSV file...")
+                                self.display.addItem(
+                                    "Discarding first row of CSV file..."
+                                )
                         else:
                             csv_data.append(list(float(x) for x in row))
             except PermissionError:
@@ -834,39 +836,66 @@ class AMGcodeCalculator(QWidget):
                 self.gcode.append(f"\n;===Starting {shape} {i + 1}===\n")
                 x, y, z = position
                 curr_height = 0
+                n_layers = 0
                 vertical = not self.horizontal.isChecked()
                 x_direction = True
                 y_direction = True
                 self.gcode.append(
                     f"G1 Z{self.sh_input.text()} F{self.nps_input.text()}\n"
                 )
+                try:
+                    _, r_id, hs_opt_ls, w_l, p_ls, ss_ls, rpm_1, rpm_2, t_ls, layers = (
+                        csv_data[idx % len(csv_data)]
+                    )
+                    # print(idx) # debugging purposes
+                    idx += 1
+                except ValueError:
+                    _, r_id, hs_opt_ls, w_l, p_ls, ss_ls, rpm_1, rpm_2, t_ls = csv_data[
+                        idx % len(csv_data)
+                    ]
+                    layers = float("inf")
+                    # print(idx) # debugging purposes
+                    idx += 1
                 while curr_height <= height:
                     curr_length = 0
+                    if n_layers >= layers:
+                        # print("functionally graded", i, n_layers, idx) # debugging purposes
+                        (
+                            _,
+                            r_id,
+                            hs_opt_ls,
+                            w_l,
+                            p_ls,
+                            ss_ls,
+                            rpm_1,
+                            rpm_2,
+                            t_ls,
+                            layers,
+                        ) = csv_data[idx % len(csv_data)]
+                        idx += 1
+                        n_layers = 0
+                    if rpm_1 != last_rpm_1 or rpm_2 != last_rpm_2:
+                        self.gcode.append("\n;===Adjusting deposition rate===")
+                        self.gcode.append(
+                            f"\n{self.mscode['gcode_set_dispenser_speed'].format(i=self.h1_input.text(), v=rpm_1)} ; Feed rate for hopper 1\n"
+                        )
+                        self.gcode.append(
+                            f"{self.mscode['gcode_set_dispenser_speed'].format(i=self.ac1_input.text(), v=self.gfr_input.text())} ; Argon carrier gas flow rate hopper 1\n"
+                        )
+                        self.gcode.append(
+                            f"{self.mscode['gcode_set_dispenser_speed'].format(i=self.h2_input.text(), v=rpm_2)} ; Feed rate for hopper 2\n"
+                        )
+                        self.gcode.append(
+                            f"{self.mscode['gcode_set_dispenser_speed'].format(i=self.ac2_input.text(), v=self.gfr_input.text())} ; Argon carrier gas flow rate hopper 2\n"
+                        )
+                        self.gcode.append(
+                            f"G4 P{self.wt_input.text()} ; Powder stabilization\n"
+                        )
+                        last_rpm_1 = rpm_1
+                        last_rpm_2 = rpm_2
                     while curr_length <= (
                         hlength * vertical + vlength * (not vertical)
                     ):  # TODO : assumes hlength == v_length
-                        _, r_id, hs_opt_ls, w_l, p_ls, ss_ls, rpm_1, rpm_2, t_ls = (
-                            csv_data[idx % len(csv_data)] # TODO
-                        )
-                        if rpm_1 != last_rpm_1 or rpm_2 != last_rpm_2:
-                            self.gcode.append("\n;===Adjusting deposition rate===")
-                            self.gcode.append(
-                                f"\n{self.mscode['gcode_set_dispenser_speed'].format(i=self.h1_input.text(), v=rpm_1)} ; Feed rate for hopper 1\n"
-                            )
-                            self.gcode.append(
-                                f"{self.mscode['gcode_set_dispenser_speed'].format(i=self.ac1_input.text(), v=self.gfr_input.text())} ; Argon carrier gas flow rate hopper 1\n"
-                            )
-                            self.gcode.append(
-                                f"{self.mscode['gcode_set_dispenser_speed'].format(i=self.h2_input.text(), v=rpm_2)} ; Feed rate for hopper 2\n"
-                            )
-                            self.gcode.append(
-                                f"{self.mscode['gcode_set_dispenser_speed'].format(i=self.ac2_input.text(), v=self.gfr_input.text())} ; Argon carrier gas flow rate hopper 2\n"
-                            )
-                            self.gcode.append(
-                                f"G4 P{self.wt_input.text()} ; Powder stabilization\n"
-                            )
-                            last_rpm_1 = rpm_1
-                            last_rpm_2 = rpm_2
                         if vertical:
                             if y_direction:
                                 self.strike_gcode(
@@ -875,7 +904,6 @@ class AMGcodeCalculator(QWidget):
                                     vlength,
                                     "+y",
                                 )
-                                idx += 1
                                 y += vlength
                                 x += hs_opt_ls * w_l * (x_direction * 2 - 1)
                                 y_direction = not y_direction
@@ -887,7 +915,6 @@ class AMGcodeCalculator(QWidget):
                                     vlength,
                                     "-y",
                                 )
-                                idx += 1
                                 y -= vlength
                                 x += hs_opt_ls * w_l * (x_direction * 2 - 1)
                                 y_direction = not y_direction
@@ -901,7 +928,6 @@ class AMGcodeCalculator(QWidget):
                                     hlength,
                                     "+x",
                                 )
-                                idx += 1
                                 x += hlength
                                 y += hs_opt_ls * w_l * (y_direction * 2 - 1)
                                 x_direction = not x_direction
@@ -913,7 +939,6 @@ class AMGcodeCalculator(QWidget):
                                     hlength,
                                     "-x",
                                 )
-                                idx += 1
                                 x -= hlength
                                 y += hs_opt_ls * w_l * (y_direction * 2 - 1)
                                 x_direction = not x_direction
@@ -921,6 +946,7 @@ class AMGcodeCalculator(QWidget):
 
                     z += t_ls
                     curr_height += t_ls  # TODO
+                    n_layers += 1
                     if vertical:
                         x = position[0] + x_direction * hlength
                         x_direction = not x_direction
