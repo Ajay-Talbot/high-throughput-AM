@@ -1,3 +1,9 @@
+#######################################
+#         AM G-CODE GENERATOR         #
+#    Author: Arthur Jiun Wei Hwang    #
+#      Latest update: 23-05-2025      #
+#######################################
+
 import math
 import csv
 import sys
@@ -36,7 +42,13 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("AM G-Code Generator")
-        self.setWindowIcon(QIcon(".\\icon.ico"))
+
+        if sys.platform.startswith("win"):
+            app.setWindowIcon(QIcon("icon.ico"))
+        elif sys.platform == "darwin":
+            app.setWindowIcon(QIcon("icon.icns"))
+        else:
+            app.setWindowIcon(QIcon("icon.png"))
         self.resize(1200, 600)
 
         scroll_area = QScrollArea()
