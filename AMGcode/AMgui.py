@@ -31,6 +31,7 @@ import matplotlib.patches as patches
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
+
 #######################################
 #         AM G-CODE GENERATOR         #
 #    Author: Arthur Jiun Wei Hwang    #
@@ -286,7 +287,7 @@ class AMGcodeCalculator(QWidget):
             ),
             "gcode_aimingbeam_on": self.settings.value(
                 "gcode_aimingbeam_on", "M201 (ABN)"
-            ),  # TODO
+            ),
             "gcode_aimingbeam_off": self.settings.value(
                 "gcode_aimingbeam_off", "M201 (ABF)"
             ),
