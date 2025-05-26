@@ -862,7 +862,7 @@ class AMGcodeCalculator(QWidget):
                 self.display.addItem(error)
                 self.display.scrollToBottom()
 
-            self.positions.sort(key = lambda pos: (pos[1], pos[0]))
+            self.positions.sort(key=lambda pos: (pos[1], pos[0]))
 
             for i, position in enumerate(self.positions):
                 self.gcode.append(f"\n;===Starting {shape} {i + 1}===\n")
@@ -1087,7 +1087,8 @@ class AMGcodeCalculator(QWidget):
         file_str = QFileDialog.getExistingDirectory(
             self, "Select Folder", "", QFileDialog.Option.ShowDirsOnly
         )
-        self.dir_input.setText(str(Path(file_str)))
+        if file_str != "":
+            self.dir_input.setText(str(Path(file_str)))
 
     def open_dialog(self, item):
         if item.text() == "START FLOW":
@@ -1390,6 +1391,7 @@ class FileDrop(QLabel):
         if Path(file_str).suffix == ".csv":
             self.file_path = Path(file_str)
             self.setText(f"File: {self.file_path.name}")
+
 
 app = QApplication(sys.argv)
 
