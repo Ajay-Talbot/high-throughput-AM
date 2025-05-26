@@ -887,7 +887,6 @@ class AMGcodeCalculator(QWidget):
                     # print(idx) # debugging purposes
                     idx += 1
                 while curr_height <= height:
-                    # self.gcode.append(f"\n;Layer {int(curr_height / t_ls + 1)}, Row {idx}\n") # debugging purposes
                     curr_length = 0
                     if n_layers >= layers:
                         # print("functionally graded", i, n_layers, idx) # debugging purposes
@@ -905,6 +904,7 @@ class AMGcodeCalculator(QWidget):
                         ) = csv_data[idx % len(csv_data)]
                         idx += 1
                         n_layers = 0
+                    # self.gcode.append(f"\n;Layer {int(curr_height / t_ls + 1)}, Row {idx}\n") # debugging purposes
                     if rpm_1 != last_rpm_1 or rpm_2 != last_rpm_2:
                         self.gcode.append("\n;===Adjusting deposition rate===")
                         self.gcode.append(
