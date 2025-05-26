@@ -144,7 +144,13 @@ class AMGcodeCalculator(QWidget):
         calculate = QPushButton(
             "Calculate configuration", clicked=self.calculate_positions
         )
+        self.positions = []
         wrap_buttons.addWidget(calculate, 2)
+
+        wrap_buttons.addStretch(1)
+
+        add_position = QPushButton("Add position", clicked=self.add_position)
+        wrap_buttons.addWidget(add_position, 2)
 
         wrap_buttons.addStretch(1)
 
@@ -487,8 +493,27 @@ class AMGcodeCalculator(QWidget):
         self.canvas.draw()
 
     def on_click(self, event):
-        self.display.addItem(f"Clicked at x={event.xdata}, y={event.ydata}")
+        self.clicked_x = event.xdata
+        self.clicked_y = event.ydata
+        self.display.addItem(f"Clicked at x={self.clicked_x}, y={self.clicked_y}")
         self.display.scrollToBottom()
+
+    def add_position(self):
+        try:
+            if self.clicked_x is None and self.clicked_y is None:
+                error = QListWidgetItem("Error: No position was selected.")
+                error.setForeground(QColor("#ff0000"))
+                self.display.addItem(error)
+                self.display.scrollToBottom()
+            else:
+                self.positions.append((self.clicked_x, self.clicked_y, 0))
+                self.display.addItem("Position added")
+                self.plot()
+        except AttributeError:
+            error = QListWidgetItem("Error: No position was selected.")
+            error.setForeground(QColor("#ff0000"))
+            self.display.addItem(error)
+            self.display.scrollToBottom()
 
     def create_widget_track(self):
         w = QWidget()
@@ -735,13 +760,14 @@ class AMGcodeCalculator(QWidget):
         self.display.scrollToBottom()
         self.plot()
 
-        return True
-
     def generate_gcode(self):
         if self.filedrop.file_path is None:
             self.display.addItem("There are no CSV file to read")
             self.display.scrollToBottom()
-        elif self.calculate_positions():
+        elif not self.positions:
+            self.display.addItem("No positions calculated")
+            self.display.scrollToBottom()
+        else:
             shape = self.shape_combobox.currentText()
             if shape == "Single Track":
                 hlength = (
@@ -808,7 +834,7 @@ class AMGcodeCalculator(QWidget):
                                 error = QListWidgetItem(
                                     f"Error: CSV not formatted correctly. Incorrect number of columns: {len(row)}"
                                 )
-                                error.setForeground(QColor("#ff0000cc"))
+                                error.setForeground(QColor("#ff0000"))
                                 self.display.addItem(error)
                                 self.display.scrollToBottom()
                             else:
@@ -821,17 +847,17 @@ class AMGcodeCalculator(QWidget):
                 error = QListWidgetItem(
                     "Error: Permission denied. Cannot access CSV file"
                 )
-                error.setForeground(QColor("#ff0000cc"))
+                error.setForeground(QColor("#ff0000"))
                 self.display.addItem(error)
                 self.display.scrollToBottom()
             except FileNotFoundError:
                 error = QListWidgetItem("Error: CSV file not found")
-                error.setForeground(QColor("#ff0000cc"))
+                error.setForeground(QColor("#ff0000"))
                 self.display.addItem(error)
                 self.display.scrollToBottom()
             except Exception as e:
                 error = QListWidgetItem(f"Error: An unexpected error occurred: {e}")
-                error.setForeground(QColor("#ff0000cc"))
+                error.setForeground(QColor("#ff0000"))
                 self.display.addItem(error)
                 self.display.scrollToBottom()
 
@@ -999,17 +1025,17 @@ class AMGcodeCalculator(QWidget):
                 error = QListWidgetItem(
                     "Error: Permission denied. Cannot access Save directory"
                 )
-                error.setForeground(QColor("#ff0000cc"))
+                error.setForeground(QColor("#ff000"))
                 self.display.addItem(error)
                 self.display.scrollToBottom()
             except FileNotFoundError:
                 error = QListWidgetItem("Error: Save directory not found")
-                error.setForeground(QColor("#ff0000cc"))
+                error.setForeground(QColor("#ff0000"))
                 self.display.addItem(error)
                 self.display.scrollToBottom()
             except Exception as e:
                 error = QListWidgetItem(f"Error: An unexpected error occurred: {e}")
-                error.setForeground(QColor("#ff0000cc"))
+                error.setForeground(QColor("#ff0000"))
                 self.display.addItem(error)
                 self.display.scrollToBottom()
 
@@ -1359,7 +1385,8 @@ class FileDrop(QLabel):
             self, "Select CSV File", "", "CSV Files (*.csv)"
         )
         self.file_path = Path(file_str)
-        self.setText(f"File: {self.file_path.name}")
+        if self.file_path.suffix == ".csv":
+            self.setText(f"File: {self.file_path.name}")
 
 
 app = QApplication(sys.argv)
