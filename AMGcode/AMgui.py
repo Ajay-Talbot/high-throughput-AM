@@ -1387,10 +1387,9 @@ class FileDrop(QLabel):
         file_str, _ = QFileDialog.getOpenFileName(
             self, "Select CSV File", "", "CSV Files (*.csv)"
         )
-        self.file_path = Path(file_str)
-        if self.file_path.suffix == ".csv":
+        if Path(file_str).suffix == ".csv":
+            self.file_path = Path(file_str)
             self.setText(f"File: {self.file_path.name}")
-
 
 app = QApplication(sys.argv)
 
