@@ -82,7 +82,9 @@ class AMGcodeCalculator(QWidget):
         side_tab = QVBoxLayout()
 
         title = QLabel("AM G-Code Generator\n")
-        title.setStyleSheet("QLabel {font-size: 18px; font-weight: 700;}")
+        title.setStyleSheet(
+            "QLabel {font-size: 18px; font-weight: 700; color: #000000;}"
+        )
         side_tab.addWidget(title, 1)
 
         self.filedrop = FileDrop()
@@ -180,9 +182,6 @@ class AMGcodeCalculator(QWidget):
         display_tab.addWidget(self.canvas, 8)
 
         self.display = QListWidget()
-        self.display.setStyleSheet(
-            "QListWidget {font-size: 12px; background-color: #C9CAC9}"
-        )
         self.display.setWordWrap(True)
         display_tab.addWidget(self.display, 2)
 
@@ -199,7 +198,9 @@ class AMGcodeCalculator(QWidget):
         self.settings = QSettings("AMGcodeGenerator", "Settings")
 
         title2 = QLabel("Machine Settings")
-        title2.setStyleSheet("QLabel {font-size: 18px; font-weight: 700;}")
+        title2.setStyleSheet(
+            "QLabel {font-size: 18px; font-weight: 700; color: #000000;}"
+        )
         settings_layout.addWidget(title2, 2)
 
         dir_layout = QHBoxLayout()
@@ -346,18 +347,20 @@ class AMGcodeCalculator(QWidget):
         setting_list.setStyleSheet("""
             QListWidget {
                 background-color: #f0f0f0;
-                color: black;
+                color: #000000;
             }
             QListWidget::item {
-                border-bottom: 1px solid gray;
+                border-bottom: 1px solid #b0b0b0;
+                border-right: 1px solid #c0c0c0;
+                color: #000000;
             }
             QListWidget::item:selected {
                 background-color: #f0f0f0; 
-                color: black       
+                color: #000000;       
             }
             QListWidget::item:hover {
-                background-color: lightgray;
-                color: black;
+                background-color: #e0e0e0;
+                color: #000000;
             }
         """)
         setting_list.itemClicked.connect(self.open_dialog)
@@ -857,6 +860,7 @@ class AMGcodeCalculator(QWidget):
                     # print(idx) # debugging purposes
                     idx += 1
                 while curr_height <= height:
+                    # self.gcode.append(f"\n;Layer {int(curr_height / t_ls + 1)}, Row {idx}\n") # debugging purposes
                     curr_length = 0
                     if n_layers >= layers:
                         # print("functionally graded", i, n_layers, idx) # debugging purposes
@@ -1359,6 +1363,52 @@ class FileDrop(QLabel):
 
 
 app = QApplication(sys.argv)
+
+app.setStyleSheet("""
+    QWidget {
+        background-color: #ffffff;
+        color: #000000;
+        border: none;
+    }
+    QLabel {
+        color: #000000;
+    }
+    QPushButton {
+        background-color: #e0e0e0;
+        border: 1px solid #d0d0d0;
+        border-radius: 4px;
+        color: #000000;
+    }
+    QPushButton:hover {
+        background-color: #d0d0d0;
+        color: #000000;
+    }
+    QLineEdit {
+        background-color: #f0f0f0;
+        border-bottom: 1px solid #b0b0b0;
+        color: #000000  ;        
+    }
+    QCheckBox {
+        background-color: #ffffff;
+        color: #000000;          
+    }
+    QComboBox {
+        background-color: #f0f0f0;  
+        border-bottom: 1px solid #b0b0b0;
+        border-right: 1px solid #c0c0c0;
+        color: #000000;        
+    }
+    QComboBox:hover {
+        background-color: #e0e0e0;
+        color: #000000;          
+    }            
+    QListWidget {
+        font-size: 12px;
+        background-color: #c9cac9;
+        color: #000000;
+    }
+""")
+
 window = MainWindow()
 window.show()
 sys.exit(app.exec())
