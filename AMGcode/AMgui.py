@@ -862,6 +862,8 @@ class AMGcodeCalculator(QWidget):
                 self.display.addItem(error)
                 self.display.scrollToBottom()
 
+            self.positions.sort(key = lambda pos: (pos[1], pos[0]))
+
             for i, position in enumerate(self.positions):
                 self.gcode.append(f"\n;===Starting {shape} {i + 1}===\n")
                 x, y, z = position
