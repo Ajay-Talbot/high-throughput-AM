@@ -193,7 +193,7 @@ def track_gen(Testing_Mode, camera, Powers, Scan_Speeds, Distance, Num_Tracks, l
 
         output.append(";========= track {0} ==========".format(track_number))
         output.append("\nG1 X" + x_start_coord + " Y" + y_start_coord + " F" + str(Speed_NotPrinting))
-        output.append("\nG1 Z" + str(layer_height) + " F" + str(Speed_NotPrinting))
+        output.append("\nG1 Z" + str(layer_height) + " F" + str(Speed_NotPrinting)) 
         output.append("\nG1 F" + str(print_speed * 60) + ";set print speed\n")
 
         if Testing_Mode:
