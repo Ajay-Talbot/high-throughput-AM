@@ -1,14 +1,8 @@
-import os
-import pyqt6_tools
-import sys
-from pathlib import Path
 import math
 import csv
-# Set Qt plugin path (for macOS to find libqtcocoa.dylib)
-plugin_path = os.path.join(os.path.dirname(pyqt6_tools.__file__), 'Qt', 'plugins')
-os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = os.path.join(plugin_path, 'platforms')
+import sys
+from pathlib import Path
 
-# Now safe to import PyQt
 from PyQt6.QtCore import Qt, QSettings
 from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QMouseEvent, QColor, QIcon
 from PyQt6.QtWidgets import (
@@ -35,7 +29,8 @@ from PyQt6.QtWidgets import (
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from matplotlib.figure import Figure
-from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+
 
 #######################################
 #         AM G-CODE GENERATOR         #
