@@ -1012,14 +1012,26 @@ class AMGcodeCalculator(QWidget):
                 f"{self.mscode['gcode_set_dispenser_speed'].format(i=self.ac2_input.text(), v=0)} ; Turn off hopper 2 carrier gas\n"
             )
 
+            save_file = None
+            file_str, _ = QFileDialog.getSaveFileName(
+            self, "Save as", self.dir_input.text(), "GCode Files (*.gcode);;All Files (*)", 
+            )
+            if file_str and file_str.endswith(".gcode"):
+                save_file = Path(file_str)
+
             try:
-                with open(
-                    Path(self.dir_input.text())
-                    / f"{self.shape_combobox.currentText()}s_{self.substrate_combobox.currentText()}_({self.filedrop.file_path.stem}).gcode",
-                    "w",
-                ) as f:
-                    for row in self.gcode:
-                        f.write(row)
+                if save_file is None:
+                    with open(
+                        Path(self.dir_input.text())
+                        / f"{self.shape_combobox.currentText()}s_{self.substrate_combobox.currentText()}_({self.filedrop.file_path.stem}).gcode",
+                        "w",
+                    ) as f:
+                        for row in self.gcode:
+                            f.write(row)
+                else:
+                    with open(save_file, "w") as f:
+                        for row in self.gcode:
+                            f.write(row)
                 success = QListWidgetItem("G-code successfully generated")
                 success.setForeground(QColor("#1cd000"))
                 self.display.addItem(success)
