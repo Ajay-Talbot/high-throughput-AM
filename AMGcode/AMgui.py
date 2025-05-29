@@ -1014,7 +1014,10 @@ class AMGcodeCalculator(QWidget):
 
             save_file = None
             file_str, _ = QFileDialog.getSaveFileName(
-            self, "Save as", self.dir_input.text(), "GCode Files (*.gcode);;All Files (*)", 
+                self,
+                "Save as",
+                self.dir_input.text(),
+                "GCode Files (*.gcode);;All Files (*)",
             )
             if file_str and file_str.endswith(".gcode"):
                 save_file = Path(file_str)
