@@ -35,7 +35,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 #######################################
 #         AM G-CODE GENERATOR         #
 #    Author: Arthur Jiun Wei Hwang    #
-#      Latest update: 23-05-2025      #
+#      Latest update: 28-05-2025      #
 #######################################
 
 
