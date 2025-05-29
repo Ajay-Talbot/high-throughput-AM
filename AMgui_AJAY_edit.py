@@ -10,7 +10,7 @@ os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = os.path.join(plugin_path, 'platforms
 
 # Now safe to import PyQt
 from PyQt6.QtCore import Qt, QSettings
-from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QMouseEvent, QColor, QIcon
+from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QMouseEvent, QColor
 from PyQt6.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -37,24 +37,10 @@ import matplotlib.patches as patches
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 
-#######################################
-#         AM G-CODE GENERATOR         #
-#    Author: Arthur Jiun Wei Hwang    #
-#      Latest update: 23-05-2025      #
-#######################################
-
-
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("AM G-Code Generator")
-
-        if sys.platform.startswith("win"):
-            app.setWindowIcon(QIcon("icon.ico"))
-        elif sys.platform == "darwin":
-            app.setWindowIcon(QIcon("icon.icns"))
-        else:
-            app.setWindowIcon(QIcon("icon.png"))
         self.resize(1200, 600)
 
         scroll_area = QScrollArea()
@@ -88,19 +74,11 @@ class AMGcodeCalculator(QWidget):
         side_tab = QVBoxLayout()
 
         title = QLabel("AM G-Code Generator\n")
-        title.setStyleSheet(
-            "QLabel {font-size: 18px; font-weight: 700; color: #000000;}"
-        )
+        title.setStyleSheet("QLabel {font-size: 18px; font-weight: 700;}")
         side_tab.addWidget(title, 1)
 
         self.filedrop = FileDrop()
         side_tab.addWidget(self.filedrop, 2)
-
-        self.include_heading = QCheckBox("CSV file with heading")
-        self.include_heading.setChecked(True)
-        side_tab.addWidget(self.include_heading, 1)
-
-        side_tab.addStretch(1)
 
         shape_layout = QHBoxLayout()
         shape_label = QLabel("Select the shape of the print: ")
@@ -150,13 +128,7 @@ class AMGcodeCalculator(QWidget):
         calculate = QPushButton(
             "Calculate configuration", clicked=self.calculate_positions
         )
-        self.positions = []
         wrap_buttons.addWidget(calculate, 2)
-
-        wrap_buttons.addStretch(1)
-
-        add_position = QPushButton("Add position", clicked=self.add_position)
-        wrap_buttons.addWidget(add_position, 2)
 
         wrap_buttons.addStretch(1)
 
@@ -194,6 +166,9 @@ class AMGcodeCalculator(QWidget):
         display_tab.addWidget(self.canvas, 8)
 
         self.display = QListWidget()
+        self.display.setStyleSheet(
+            "QListWidget {font-size: 12px; background-color: #C9CAC9}"
+        )
         self.display.setWordWrap(True)
         display_tab.addWidget(self.display, 2)
 
@@ -210,9 +185,7 @@ class AMGcodeCalculator(QWidget):
         self.settings = QSettings("AMGcodeGenerator", "Settings")
 
         title2 = QLabel("Machine Settings")
-        title2.setStyleSheet(
-            "QLabel {font-size: 18px; font-weight: 700; color: #000000;}"
-        )
+        title2.setStyleSheet("QLabel {font-size: 18px; font-weight: 700;}")
         settings_layout.addWidget(title2, 2)
 
         dir_layout = QHBoxLayout()
@@ -292,7 +265,7 @@ class AMGcodeCalculator(QWidget):
             ),
             "gcode_aimingbeam_on": self.settings.value(
                 "gcode_aimingbeam_on", "M201 (ABN)"
-            ),
+            ),  # TODO
             "gcode_aimingbeam_off": self.settings.value(
                 "gcode_aimingbeam_off", "M201 (ABF)"
             ),
@@ -359,20 +332,18 @@ class AMGcodeCalculator(QWidget):
         setting_list.setStyleSheet("""
             QListWidget {
                 background-color: #f0f0f0;
-                color: #000000;
+                color: black;
             }
             QListWidget::item {
-                border-bottom: 1px solid #b0b0b0;
-                border-right: 1px solid #c0c0c0;
-                color: #000000;
+                border-bottom: 1px solid gray;
             }
             QListWidget::item:selected {
                 background-color: #f0f0f0; 
-                color: #000000;       
+                color: black       
             }
             QListWidget::item:hover {
-                background-color: #e0e0e0;
-                color: #000000;
+                background-color: lightgray;
+                color: black;
             }
         """)
         setting_list.itemClicked.connect(self.open_dialog)
@@ -485,7 +456,7 @@ class AMGcodeCalculator(QWidget):
                     patches.Rectangle(
                         (xy[0], xy[1]),
                         float(self.cube_length.text()),
-                        float(self.cube_length.text()),
+                        float(self.cube_height.text()),
                         edgecolor="blue",
                         facecolor="blue",
                     )
@@ -499,27 +470,8 @@ class AMGcodeCalculator(QWidget):
         self.canvas.draw()
 
     def on_click(self, event):
-        self.clicked_x = event.xdata
-        self.clicked_y = event.ydata
-        self.display.addItem(f"Clicked at x={self.clicked_x}, y={self.clicked_y}")
+        self.display.addItem(f"Clicked at x={event.xdata}, y={event.ydata}")
         self.display.scrollToBottom()
-
-    def add_position(self):
-        try:
-            if self.clicked_x is None and self.clicked_y is None:
-                error = QListWidgetItem("Error: No position was selected.")
-                error.setForeground(QColor("#ff0000"))
-                self.display.addItem(error)
-                self.display.scrollToBottom()
-            else:
-                self.positions.append((self.clicked_x, self.clicked_y, 0))
-                self.display.addItem("Position added")
-                self.plot()
-        except AttributeError:
-            error = QListWidgetItem("Error: No position was selected.")
-            error.setForeground(QColor("#ff0000"))
-            self.display.addItem(error)
-            self.display.scrollToBottom()
 
     def create_widget_track(self):
         w = QWidget()
@@ -635,13 +587,13 @@ class AMGcodeCalculator(QWidget):
         w = QWidget()
         layout = QGridLayout(w)
 
-        width_label = QLabel("Substrate width X (mm): ")
+        width_label = QLabel("Substrate width (mm): ")
         self.substrate_width = QLineEdit()
         self.substrate_width.setText("65")
         layout.addWidget(width_label, 0, 0)
         layout.addWidget(self.substrate_width, 0, 1)
 
-        height_label = QLabel("Substrate height Y (mm): ")
+        height_label = QLabel("Substrate height (mm): ")
         self.substrate_height = QLineEdit()
         self.substrate_height.setText("45")
         layout.addWidget(height_label, 1, 0)
@@ -766,14 +718,13 @@ class AMGcodeCalculator(QWidget):
         self.display.scrollToBottom()
         self.plot()
 
+        return True
+
     def generate_gcode(self):
         if self.filedrop.file_path is None:
             self.display.addItem("There are no CSV file to read")
             self.display.scrollToBottom()
-        elif not self.positions:
-            self.display.addItem("No positions calculated")
-            self.display.scrollToBottom()
-        else:
+        elif self.calculate_positions():
             shape = self.shape_combobox.currentText()
             if shape == "Single Track":
                 hlength = (
@@ -832,108 +783,67 @@ class AMGcodeCalculator(QWidget):
             try:
                 with open(self.filedrop.file_path, "r") as f:
                     csv_reader = csv.reader(f)
-                    first_line = self.include_heading.isChecked()
+                    first_line = True
                     for row in csv_reader:
                         if first_line:
                             first_line = not first_line
-                            if len(row) != 9 and len(row) != 10:
-                                error = QListWidgetItem(
-                                    f"Error: CSV not formatted correctly. Incorrect number of columns: {len(row)}"
-                                )
-                                error.setForeground(QColor("#ff0000"))
-                                self.display.addItem(error)
-                                self.display.scrollToBottom()
-                            else:
-                                self.display.addItem(
-                                    "Discarding first row of CSV file..."
-                                )
                         else:
                             csv_data.append(list(float(x) for x in row))
             except PermissionError:
                 error = QListWidgetItem(
                     "Error: Permission denied. Cannot access CSV file"
                 )
-                error.setForeground(QColor("#ff0000"))
+                error.setForeground(QColor("#ff0000cc"))
                 self.display.addItem(error)
                 self.display.scrollToBottom()
             except FileNotFoundError:
                 error = QListWidgetItem("Error: CSV file not found")
-                error.setForeground(QColor("#ff0000"))
+                error.setForeground(QColor("#ff0000cc"))
                 self.display.addItem(error)
                 self.display.scrollToBottom()
             except Exception as e:
                 error = QListWidgetItem(f"Error: An unexpected error occurred: {e}")
-                error.setForeground(QColor("#ff0000"))
+                error.setForeground(QColor("#ff0000cc"))
                 self.display.addItem(error)
                 self.display.scrollToBottom()
-
-            self.positions.sort(key=lambda pos: (pos[1], pos[0]))
 
             for i, position in enumerate(self.positions):
                 self.gcode.append(f"\n;===Starting {shape} {i + 1}===\n")
                 x, y, z = position
                 curr_height = 0
-                n_layers = 0
                 vertical = not self.horizontal.isChecked()
                 x_direction = True
                 y_direction = True
                 self.gcode.append(
                     f"G1 Z{self.sh_input.text()} F{self.nps_input.text()}\n"
                 )
-                try:
-                    _, r_id, hs_opt_ls, w_l, p_ls, ss_ls, rpm_1, rpm_2, t_ls, layers = (
-                        csv_data[idx % len(csv_data)]
-                    )
-                    # print(idx) # debugging purposes
-                    idx += 1
-                except ValueError:
-                    _, r_id, hs_opt_ls, w_l, p_ls, ss_ls, rpm_1, rpm_2, t_ls = csv_data[
-                        idx % len(csv_data)
-                    ]
-                    layers = float("inf")
-                    # print(idx) # debugging purposes
-                    idx += 1
                 while curr_height <= height:
                     curr_length = 0
-                    if n_layers >= layers:
-                        # print("functionally graded", i, n_layers, idx) # debugging purposes
-                        (
-                            _,
-                            r_id,
-                            hs_opt_ls,
-                            w_l,
-                            p_ls,
-                            ss_ls,
-                            rpm_1,
-                            rpm_2,
-                            t_ls,
-                            layers,
-                        ) = csv_data[idx % len(csv_data)]
-                        idx += 1
-                        n_layers = 0
-                    # self.gcode.append(f"\n;Layer {int(curr_height / t_ls + 1)}, Row {idx}\n") # debugging purposes
-                    if rpm_1 != last_rpm_1 or rpm_2 != last_rpm_2:
-                        self.gcode.append("\n;===Adjusting deposition rate===")
-                        self.gcode.append(
-                            f"\n{self.mscode['gcode_set_dispenser_speed'].format(i=self.h1_input.text(), v=rpm_1)} ; Feed rate for hopper 1\n"
-                        )
-                        self.gcode.append(
-                            f"{self.mscode['gcode_set_dispenser_speed'].format(i=self.ac1_input.text(), v=self.gfr_input.text())} ; Argon carrier gas flow rate hopper 1\n"
-                        )
-                        self.gcode.append(
-                            f"{self.mscode['gcode_set_dispenser_speed'].format(i=self.h2_input.text(), v=rpm_2)} ; Feed rate for hopper 2\n"
-                        )
-                        self.gcode.append(
-                            f"{self.mscode['gcode_set_dispenser_speed'].format(i=self.ac2_input.text(), v=self.gfr_input.text())} ; Argon carrier gas flow rate hopper 2\n"
-                        )
-                        self.gcode.append(
-                            f"G4 P{self.wt_input.text()} ; Powder stabilization\n"
-                        )
-                        last_rpm_1 = rpm_1
-                        last_rpm_2 = rpm_2
                     while curr_length <= (
                         hlength * vertical + vlength * (not vertical)
                     ):  # TODO : assumes hlength == v_length
+                        _, r_id, hs_opt_ls, w_l, p_ls, ss_ls, rpm_1, rpm_2, t_ls = (
+                            csv_data[idx % len(csv_data)]
+                        )
+                        if rpm_1 != last_rpm_1 or rpm_2 != last_rpm_2:
+                            self.gcode.append("\n;===Adjusting deposition rate===")
+                            self.gcode.append(
+                                f"\n{self.mscode['gcode_set_dispenser_speed'].format(i=self.h1_input.text(), v=rpm_1)} ; Feed rate for hopper 1\n"
+                            )
+                            self.gcode.append(
+                                f"{self.mscode['gcode_set_dispenser_speed'].format(i=self.ac1_input.text(), v=self.gfr_input.text())} ; Argon carrier gas flow rate hopper 1\n"
+                            )
+                            self.gcode.append(
+                                f"{self.mscode['gcode_set_dispenser_speed'].format(i=self.h2_input.text(), v=rpm_2)} ; Feed rate for hopper 2\n"
+                            )
+                            self.gcode.append(
+                                f"{self.mscode['gcode_set_dispenser_speed'].format(i=self.ac2_input.text(), v=self.gfr_input.text())} ; Argon carrier gas flow rate hopper 2\n"
+                            )
+                            self.gcode.append(
+                                f"G4 P{self.wt_input.text()} ; Powder stabilization\n"
+                            )
+                            last_rpm_1 = rpm_1
+                            last_rpm_2 = rpm_2
                         if vertical:
                             if y_direction:
                                 self.strike_gcode(
@@ -942,6 +852,7 @@ class AMGcodeCalculator(QWidget):
                                     vlength,
                                     "+y",
                                 )
+                                idx += 1
                                 y += vlength
                                 x += hs_opt_ls * w_l * (x_direction * 2 - 1)
                                 y_direction = not y_direction
@@ -953,6 +864,7 @@ class AMGcodeCalculator(QWidget):
                                     vlength,
                                     "-y",
                                 )
+                                idx += 1
                                 y -= vlength
                                 x += hs_opt_ls * w_l * (x_direction * 2 - 1)
                                 y_direction = not y_direction
@@ -966,6 +878,7 @@ class AMGcodeCalculator(QWidget):
                                     hlength,
                                     "+x",
                                 )
+                                idx += 1
                                 x += hlength
                                 y += hs_opt_ls * w_l * (y_direction * 2 - 1)
                                 x_direction = not x_direction
@@ -977,6 +890,7 @@ class AMGcodeCalculator(QWidget):
                                     hlength,
                                     "-x",
                                 )
+                                idx += 1
                                 x -= hlength
                                 y += hs_opt_ls * w_l * (y_direction * 2 - 1)
                                 x_direction = not x_direction
@@ -984,7 +898,6 @@ class AMGcodeCalculator(QWidget):
 
                     z += t_ls
                     curr_height += t_ls  # TODO
-                    n_layers += 1
                     if vertical:
                         x = position[0] + x_direction * hlength
                         x_direction = not x_direction
@@ -1017,29 +930,14 @@ class AMGcodeCalculator(QWidget):
                 f"{self.mscode['gcode_set_dispenser_speed'].format(i=self.ac2_input.text(), v=0)} ; Turn off hopper 2 carrier gas\n"
             )
 
-            save_file = None
-            file_str, _ = QFileDialog.getSaveFileName(
-                self,
-                "Save as",
-                self.dir_input.text(),
-                "GCode Files (*.gcode);;All Files (*)",
-            )
-            if file_str and file_str.endswith(".gcode"):
-                save_file = Path(file_str)
-
             try:
-                if save_file is None:
-                    with open(
-                        Path(self.dir_input.text())
-                        / f"{self.shape_combobox.currentText()}s_{self.substrate_combobox.currentText()}_({self.filedrop.file_path.stem}).gcode",
-                        "w",
-                    ) as f:
-                        for row in self.gcode:
-                            f.write(row)
-                else:
-                    with open(save_file, "w") as f:
-                        for row in self.gcode:
-                            f.write(row)
+                with open(
+                    Path(self.dir_input.text())
+                    / f"{self.shape_combobox.currentText()}s_{self.substrate_combobox.currentText()}_({self.filedrop.file_path.stem}).gcode",
+                    "w",
+                ) as f:
+                    for row in self.gcode:
+                        f.write(row)
                 success = QListWidgetItem("G-code successfully generated")
                 success.setForeground(QColor("#1cd000"))
                 self.display.addItem(success)
@@ -1048,17 +946,17 @@ class AMGcodeCalculator(QWidget):
                 error = QListWidgetItem(
                     "Error: Permission denied. Cannot access Save directory"
                 )
-                error.setForeground(QColor("#ff000"))
+                error.setForeground(QColor("#ff0000cc"))
                 self.display.addItem(error)
                 self.display.scrollToBottom()
             except FileNotFoundError:
                 error = QListWidgetItem("Error: Save directory not found")
-                error.setForeground(QColor("#ff0000"))
+                error.setForeground(QColor("#ff0000cc"))
                 self.display.addItem(error)
                 self.display.scrollToBottom()
             except Exception as e:
                 error = QListWidgetItem(f"Error: An unexpected error occurred: {e}")
-                error.setForeground(QColor("#ff0000"))
+                error.setForeground(QColor("#ff0000cc"))
                 self.display.addItem(error)
                 self.display.scrollToBottom()
 
@@ -1107,8 +1005,7 @@ class AMGcodeCalculator(QWidget):
         file_str = QFileDialog.getExistingDirectory(
             self, "Select Folder", "", QFileDialog.Option.ShowDirsOnly
         )
-        if file_str != "":
-            self.dir_input.setText(str(Path(file_str)))
+        self.dir_input.setText(str(Path(file_str)))
 
     def open_dialog(self, item):
         if item.text() == "START FLOW":
@@ -1318,7 +1215,6 @@ class AMGcodeCalculator(QWidget):
             description.setStyleSheet("QLabel { border: 1px solid gray }")
             layout.addWidget(description, 2)
             ms_code = QLineEdit()
-            ms_code.setText(self.mscode["gcode_set_dispenser_speed"])
             layout.addWidget(ms_code, 1)
             buttons = QHBoxLayout()
             buttons.addStretch(2)
@@ -1408,58 +1304,11 @@ class FileDrop(QLabel):
         file_str, _ = QFileDialog.getOpenFileName(
             self, "Select CSV File", "", "CSV Files (*.csv)"
         )
-        if Path(file_str).suffix == ".csv":
-            self.file_path = Path(file_str)
-            self.setText(f"File: {self.file_path.name}")
+        self.file_path = Path(file_str)
+        self.setText(f"File: {self.file_path.name}")
 
 
 app = QApplication(sys.argv)
-
-app.setStyleSheet("""
-    QWidget {
-        background-color: #ffffff;
-        color: #000000;
-        border: none;
-    }
-    QLabel {
-        color: #000000;
-    }
-    QPushButton {
-        background-color: #e0e0e0;
-        border: 1px solid #d0d0d0;
-        border-radius: 4px;
-        color: #000000;
-    }
-    QPushButton:hover {
-        background-color: #d0d0d0;
-        color: #000000;
-    }
-    QLineEdit {
-        background-color: #f0f0f0;
-        border-bottom: 1px solid #b0b0b0;
-        color: #000000  ;        
-    }
-    QCheckBox {
-        background-color: #ffffff;
-        color: #000000;          
-    }
-    QComboBox {
-        background-color: #f0f0f0;  
-        border-bottom: 1px solid #b0b0b0;
-        border-right: 1px solid #c0c0c0;
-        color: #000000;        
-    }
-    QComboBox:hover {
-        background-color: #e0e0e0;
-        color: #000000;          
-    }            
-    QListWidget {
-        font-size: 12px;
-        background-color: #c9cac9;
-        color: #000000;
-    }
-""")
-
 window = MainWindow()
 window.show()
 sys.exit(app.exec())
