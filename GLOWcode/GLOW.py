@@ -1,6 +1,6 @@
 import math
-import csv
 import sys
+import pandas as pd
 from pathlib import Path
 
 from PyQt6.QtCore import Qt, QSettings
@@ -33,7 +33,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
 
 #######################################
-#         AM G-CODE GENERATOR         #
+#            G.L.O.W. App             #
 #    Author: Arthur Jiun Wei Hwang    #
 #      Latest update: 28-05-2025      #
 #######################################
@@ -42,7 +42,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("AM G-Code Generator")
+        self.setWindowTitle("G-Code for Laser Operated Work")
 
         if sys.platform.startswith("win"):
             app.setWindowIcon(QIcon("icon.ico"))
@@ -72,7 +72,7 @@ class AMGcodeCalculator(QWidget):
         layout.addWidget(tab_widget)
 
         main_widget = QWidget()
-        tab_widget.addTab(main_widget, "AM G-code Generator")
+        tab_widget.addTab(main_widget, "G-code Generator")
 
         ### Main page ###
 
@@ -82,9 +82,9 @@ class AMGcodeCalculator(QWidget):
 
         side_tab = QVBoxLayout()
 
-        title = QLabel("AM G-Code Generator\n")
+        title = QLabel("G.L.O.W.")
         title.setStyleSheet(
-            "QLabel {font-size: 18px; font-weight: 700; color: #000000;}"
+            "QLabel {font-family: 'Roboto'; font-size: 24px; font-weight: 700; color: #000000;}"
         )
         side_tab.addWidget(title, 1)
 
@@ -202,7 +202,7 @@ class AMGcodeCalculator(QWidget):
         settings_layout = QVBoxLayout(setting_widget)
         settings_layout.setSpacing(3)
         settings_layout.setContentsMargins(20, 10, 20, 20)
-        self.settings = QSettings("AMGcodeGenerator", "Settings")
+        self.settings = QSettings(str(Path(__file__).resolve().parent / "Machine Settings\\settings"), QSettings.Format.IniFormat)
 
         title2 = QLabel("Machine Settings")
         title2.setStyleSheet(
@@ -823,27 +823,8 @@ class AMGcodeCalculator(QWidget):
             self.gcode.append("G4 P0.001 ; Added because G1 being skipped\n")
             self.gcode.append(f"{self.mscode['gcode_laser_on']} ; Turn on the laser\n")
 
-            csv_data = []
             try:
-                with open(self.filedrop.file_path, "r") as f:
-                    csv_reader = csv.reader(f)
-                    first_line = self.include_heading.isChecked()
-                    for row in csv_reader:
-                        if first_line:
-                            first_line = not first_line
-                            if len(row) != 9 and len(row) != 10:
-                                error = QListWidgetItem(
-                                    f"Error: CSV not formatted correctly. Incorrect number of columns: {len(row)}"
-                                )
-                                error.setForeground(QColor("#ff0000"))
-                                self.display.addItem(error)
-                                self.display.scrollToBottom()
-                            else:
-                                self.display.addItem(
-                                    "Discarding first row of CSV file..."
-                                )
-                        else:
-                            csv_data.append(list(float(x) for x in row))
+                csv_data = pd.read_csv(self.filedrop.file_path)
             except PermissionError:
                 error = QListWidgetItem(
                     "Error: Permission denied. Cannot access CSV file"
@@ -876,13 +857,13 @@ class AMGcodeCalculator(QWidget):
                     f"G1 Z{self.sh_input.text()} F{self.nps_input.text()}\n"
                 )
                 try:
-                    _, r_id, hs_opt_ls, w_l, p_ls, ss_ls, rpm_1, rpm_2, t_ls, layers = (
-                        csv_data[idx % len(csv_data)]
+                    r_id, hs_opt_ls, w_l, p_ls, ss_ls, rpm_1, rpm_2, t_ls, layers = (
+                        csv_data.loc[idx % len(csv_data)]
                     )
                     # print(idx) # debugging purposes
                     idx += 1
                 except ValueError:
-                    _, r_id, hs_opt_ls, w_l, p_ls, ss_ls, rpm_1, rpm_2, t_ls = csv_data[
+                    r_id, hs_opt_ls, w_l, p_ls, ss_ls, rpm_1, rpm_2, t_ls = csv_data.loc[
                         idx % len(csv_data)
                     ]
                     layers = float("inf")
@@ -903,7 +884,7 @@ class AMGcodeCalculator(QWidget):
                             rpm_2,
                             t_ls,
                             layers,
-                        ) = csv_data[idx % len(csv_data)]
+                        ) = csv_data.loc[idx % len(csv_data)]
                         idx += 1
                         n_layers = 0
                     # self.gcode.append(f"\n;Layer {int(curr_height / t_ls + 1)}, Row {idx}\n") # debugging purposes
