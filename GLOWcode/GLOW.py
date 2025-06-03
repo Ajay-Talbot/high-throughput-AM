@@ -39,6 +39,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 #      Latest update: 28-05-2025      #
 #######################################
 
+
 APP_DIR = str(Path(__file__).resolve().parent)
 
 
