@@ -18,14 +18,13 @@ from PyQt6.QtWidgets import (
     QLabel,
     QPushButton,
     QLineEdit,
+    QTextEdit,
     QCheckBox,
     QComboBox,
     QListWidget,
     QListWidgetItem,
     QFileDialog,
     QScrollArea,
-    QTextBrowser,
-    QTextEdit,
 )
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 
@@ -42,6 +41,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 #######################################
 
 APP_DIR = str(Path(__file__).resolve().parent)
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -69,8 +69,9 @@ class MainWindow(QMainWindow):
 
         top_bar = QHBoxLayout()
         top_bar.addStretch()
-        info_button = QPushButton("  \U0001D422  ", clicked=self.info)
-        info_button.setStyleSheet("""
+        info_button = QPushButton("  \U0001d422  ", clicked=self.info)
+        info_button.setStyleSheet(
+            """
             QPushButton {
                 font-size: 12px;
                 font-weight: 700;
@@ -85,7 +86,8 @@ class MainWindow(QMainWindow):
                 background-color: #999999;
                 color: #ffffff;
             }
-        """)
+        """
+        )
         top_bar.addWidget(info_button)
         main_layout.addLayout(top_bar)
         main_layout.addStretch()
@@ -96,9 +98,9 @@ class MainWindow(QMainWindow):
         self.info_dialog.setContentsMargins(20, 0, 20, 20)
         self.info_dialog.move(600, 0)
         self.info_dialog.setWindowTitle("Information")
-        with open(APP_DIR + "\\README.md", 'r', encoding='utf-8') as f:
+        with open(APP_DIR + "\\README.md", "r", encoding="utf-8") as f:
             md_text = f.read()
-        
+
         info = QTextEdit()
         info.setReadOnly(True)
         info.setMarkdown(md_text)
@@ -253,7 +255,9 @@ class AMGcodeCalculator(QWidget):
         settings_layout = QVBoxLayout(setting_widget)
         settings_layout.setSpacing(3)
         settings_layout.setContentsMargins(20, 10, 20, 20)
-        self.settings = QSettings(APP_DIR + "\\machine settings\\settings", QSettings.Format.IniFormat)
+        self.settings = QSettings(
+            APP_DIR + "\\machine settings\\settings", QSettings.Format.IniFormat
+        )
 
         title2 = QLabel("Machine Settings")
         title2.setStyleSheet(
@@ -402,7 +406,8 @@ class AMGcodeCalculator(QWidget):
         mscode_setting_layout.addLayout(ac2_layout, 1)
 
         setting_list = QListWidget()
-        setting_list.setStyleSheet("""
+        setting_list.setStyleSheet(
+            """
             QListWidget {
                 background-color: #f0f0f0;
                 color: #000000;
@@ -420,7 +425,8 @@ class AMGcodeCalculator(QWidget):
                 background-color: #e0e0e0;
                 color: #000000;
             }
-        """)
+        """
+        )
         setting_list.itemClicked.connect(self.open_dialog)
         start_flow = QListWidgetItem("START FLOW")
         start_flow.setToolTip(self.mscode["gcode_start_flow"])
@@ -891,20 +897,22 @@ class AMGcodeCalculator(QWidget):
                 error.setForeground(QColor("#ff0000"))
                 self.display.addItem(error)
                 self.display.scrollToBottom()
-            
+
             valid = True
             if "laser power" not in csv_data:
                 self.display.addItem("There is no 'laser power' column in the CSV file")
                 valid = False
             if "scanning speed" not in csv_data:
-                self.display.addItem("There is no 'scanning speed' column in the CSV file")
+                self.display.addItem(
+                    "There is no 'scanning speed' column in the CSV file"
+                )
                 valid = False
             if "rpm 1" not in csv_data:
                 self.display.addItem("There is no 'rpm 1' column in the CSV file")
                 valid = False
             if not valid:
                 return None
-            
+
             self.positions.sort(key=lambda pos: (pos[1], pos[0]))
 
             for i, position in enumerate(self.positions):
@@ -1017,7 +1025,7 @@ class AMGcodeCalculator(QWidget):
                                 curr_length += hs_opt_ls * w_l
 
                     z += h_ls * lh_opt_ls
-                    curr_height += h_ls * lh_opt_ls # TODO
+                    curr_height += h_ls * lh_opt_ls  # TODO
                     n_layers += 1
                     if vertical:
                         x = position[0] + x_direction * hlength
@@ -1449,7 +1457,8 @@ class FileDrop(QLabel):
 
 app = QApplication(sys.argv)
 
-app.setStyleSheet("""
+app.setStyleSheet(
+    """
     QWidget {
         background-color: #ffffff;
         color: #000000;
@@ -1492,7 +1501,8 @@ app.setStyleSheet("""
         background-color: #c9cac9;
         color: #000000;
     }
-""")
+"""
+)
 
 window = MainWindow()
 window.show()
