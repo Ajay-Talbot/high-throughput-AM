@@ -4,7 +4,7 @@ import pandas as pd
 from pathlib import Path
 
 from PyQt6.QtCore import Qt, QSettings
-from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QMouseEvent, QColor, QIcon
+from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QMouseEvent, QColor, QIcon, QPixmap
 from PyQt6.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -24,7 +24,10 @@ from PyQt6.QtWidgets import (
     QListWidgetItem,
     QFileDialog,
     QScrollArea,
+    QTextBrowser,
+    QTextEdit,
 )
+from PyQt6.QtWebEngineWidgets import QWebEngineView
 
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -45,11 +48,11 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("G-Code for Laser Operated Work")
 
         if sys.platform.startswith("win"):
-            app.setWindowIcon(QIcon("icon.ico"))
+            app.setWindowIcon(QIcon("img\\icon.ico"))
         elif sys.platform == "darwin":
-            app.setWindowIcon(QIcon("icon.icns"))
+            app.setWindowIcon(QIcon("img\\icon.icns"))
         else:
-            app.setWindowIcon(QIcon("icon.png"))
+            app.setWindowIcon(QIcon("img\\icon.png"))
         self.resize(1200, 600)
 
         scroll_area = QScrollArea()
@@ -59,6 +62,50 @@ class MainWindow(QMainWindow):
         scroll_area.setWidget(calculator)
 
         self.setCentralWidget(scroll_area)
+
+        main_layout = QVBoxLayout()
+        scroll_area.setLayout(main_layout)
+
+        top_bar = QHBoxLayout()
+        top_bar.addStretch()
+        info_button = QPushButton("  \U0001D422  ", clicked=self.info)
+        info_button.setStyleSheet("""
+            QPushButton {
+                font-size: 12px;
+                font-weight: 700;
+                background-color: #b0b0b0;
+                border: 1px solid #d0d0d0;
+                border-radius: 4px;
+                color: #ffffff;
+            }
+            QPushButton:hover {
+                font-size: 12px;
+                font-weight: 700;
+                background-color: #999999;
+                color: #ffffff;
+            }
+        """)
+        top_bar.addWidget(info_button)
+        main_layout.addLayout(top_bar)
+        main_layout.addStretch()
+
+    def info(self):
+        self.info_dialog = QDialog()
+        self.info_dialog.resize(600, 600)
+        self.info_dialog.setContentsMargins(20, 0, 20, 20)
+        self.info_dialog.move(600, 0)
+        self.info_dialog.setWindowTitle("Information")
+        with open("README.md", 'r', encoding='utf-8') as file:
+            md_text = file.read()
+        
+        info = QTextEdit()
+        info.setReadOnly(True)
+        info.setMarkdown(md_text)
+
+        layout = QVBoxLayout()
+        layout.addWidget(info)
+        self.info_dialog.setLayout(layout)
+        self.info_dialog.show()
 
 
 class AMGcodeCalculator(QWidget):
@@ -82,18 +129,21 @@ class AMGcodeCalculator(QWidget):
 
         side_tab = QVBoxLayout()
 
-        title = QLabel("G.L.O.W.")
-        title.setStyleSheet(
-            "QLabel {font-family: 'Roboto'; font-size: 24px; font-weight: 700; color: #000000;}"
-        )
-        side_tab.addWidget(title, 1)
+        title_layout = QHBoxLayout()
+        title = QLabel()
+        pixmap = QPixmap("img\\title.png")
+        pixmap = pixmap.scaledToHeight(50, Qt.TransformationMode.SmoothTransformation)
+        # title.setStyleSheet(
+        #     "QLabel {font-family: 'Roboto'; font-size: 24px; font-weight: 700; color: #000000;}"
+        # )
+        title.setPixmap(pixmap)
+        title.setScaledContents(True)
+        title_layout.addWidget(title)
+        title_layout.addStretch()
+        side_tab.addLayout(title_layout, 1)
 
         self.filedrop = FileDrop()
         side_tab.addWidget(self.filedrop, 2)
-
-        self.include_heading = QCheckBox("CSV file with heading")
-        self.include_heading.setChecked(True)
-        side_tab.addWidget(self.include_heading, 1)
 
         side_tab.addStretch(1)
 
@@ -155,7 +205,7 @@ class AMGcodeCalculator(QWidget):
 
         wrap_buttons.addStretch(1)
 
-        generate = QPushButton("Generate GCode", clicked=self.generate_gcode)
+        generate = QPushButton("Generate G-Code", clicked=self.generate_gcode)
         wrap_buttons.addWidget(generate, 2)
 
         wrap_buttons.addStretch(1)
@@ -197,12 +247,12 @@ class AMGcodeCalculator(QWidget):
         ### Settings layout ###
 
         setting_widget = QWidget()
-        tab_widget.addTab(setting_widget, "Machine settings")
+        tab_widget.addTab(setting_widget, "Machine Settings")
 
         settings_layout = QVBoxLayout(setting_widget)
         settings_layout.setSpacing(3)
         settings_layout.setContentsMargins(20, 10, 20, 20)
-        self.settings = QSettings(str(Path(__file__).resolve().parent / "Machine Settings\\settings"), QSettings.Format.IniFormat)
+        self.settings = QSettings(str(Path(__file__).resolve().parent / "machine settings\\settings"), QSettings.Format.IniFormat)
 
         title2 = QLabel("Machine Settings")
         title2.setStyleSheet(
@@ -233,7 +283,7 @@ class AMGcodeCalculator(QWidget):
         settings_layout.addLayout(sh_layout, 1)
 
         nps_layout = QHBoxLayout()
-        nps_label = QLabel("Not printing speed (mm/s): ")
+        nps_label = QLabel("Not printing speed (mm/min): ")
         nps_layout.addWidget(nps_label, 1)
         self.nps_input = QLineEdit()
         self.nps_input.setText(self.settings.value("not_print_speed", "3900"))
@@ -252,7 +302,7 @@ class AMGcodeCalculator(QWidget):
         # settings_layout.addLayout(lsp_layout, 1)
 
         gfr_layout = QHBoxLayout()
-        gfr_label = QLabel("Gas flow rate: ")
+        gfr_label = QLabel("Gas flow rate (L/min): ")
         gfr_layout.addWidget(gfr_label, 1)
         self.gfr_input = QLineEdit()
         self.gfr_input.setText(self.settings.value("gas_flow_rate", "2.5"))
@@ -261,7 +311,7 @@ class AMGcodeCalculator(QWidget):
         settings_layout.addLayout(gfr_layout, 1)
 
         wt_layout = QHBoxLayout()
-        wt_label = QLabel("Waiting time after material feed rate change (s): ")
+        wt_label = QLabel("Waiting time after powder feed rate change (s): ")
         wt_layout.addWidget(wt_label, 2)
         self.wt_input = QLineEdit()
         self.wt_input.setText(self.settings.value("waiting_time", "30"))
@@ -532,13 +582,13 @@ class AMGcodeCalculator(QWidget):
         layout.addWidget(label2, 1, 0)
         layout.addWidget(self.track_num, 1, 1)
 
-        label3 = QLabel("Horizontal spacing between tracks (mm): ")
+        label3 = QLabel("Horizontal X spacing between tracks (mm): ")
         self.track_hspacing = QLineEdit()
         self.track_hspacing.setText("3")
         layout.addWidget(label3, 2, 0)
         layout.addWidget(self.track_hspacing, 2, 1)
 
-        label4 = QLabel("Vertical spacing between tracks (mm): ")
+        label4 = QLabel("Vertical Y spacing between tracks (mm): ")
         self.track_vspacing = QLineEdit()
         self.track_vspacing.setText("2")
         layout.addWidget(label4, 2, 2)
@@ -568,13 +618,13 @@ class AMGcodeCalculator(QWidget):
         layout.addWidget(label3, 2, 0)
         layout.addWidget(self.wall_num, 2, 1)
 
-        label4 = QLabel("Horizontal spacing between walls (mm): ")
+        label4 = QLabel("Horizontal X spacing between walls (mm): ")
         self.wall_hspacing = QLineEdit()
         self.wall_hspacing.setText("3")
         layout.addWidget(label4, 3, 0)
         layout.addWidget(self.wall_hspacing, 3, 1)
 
-        label5 = QLabel("Vertical spacing between walls (mm): ")
+        label5 = QLabel("Vertical Y spacing between walls (mm): ")
         self.wall_vspacing = QLineEdit()
         self.wall_vspacing.setText("2")
         layout.addWidget(label5, 3, 2)
@@ -604,13 +654,13 @@ class AMGcodeCalculator(QWidget):
         layout.addWidget(label3, 2, 0)
         layout.addWidget(self.cube_num, 2, 1)
 
-        label4 = QLabel("Horizontal spacing between cubes (mm): ")
+        label4 = QLabel("Horizontal X spacing between cubes (mm): ")
         self.cube_hspacing = QLineEdit()
         self.cube_hspacing.setText("10")
         layout.addWidget(label4, 3, 0)
         layout.addWidget(self.cube_hspacing, 3, 1)
 
-        label5 = QLabel("Vertical spacing between cubes (mm): ")
+        label5 = QLabel("Vertical Y spacing between cubes (mm): ")
         self.cube_vspacing = QLineEdit()
         self.cube_vspacing.setText("10")
         layout.addWidget(label5, 3, 2)
@@ -809,11 +859,9 @@ class AMGcodeCalculator(QWidget):
 
             self.gcode.append(f";===={shape} G-Code====\n")
             self.gcode.append("G90 G54 G64 G50 G17 G40 G80 G94 G91.1 G49\n")
-            # self.gcode.append("G1 Z15 F2000 ; Lift the print head up before printing\n")
             self.gcode.append("G90 ; absolute coordinates\n")
             self.gcode.append("G21 ; set units to millimeters\n")
             self.gcode.append("T11 G43 H11 M6 ; set tool as T11, perform tool change\n")
-            # self.gcode.append("G1 Z5 F5000 ; move nozzle up 5mm\n")
             self.gcode.append(
                 f"{self.mscode['gcode_start_flow'].format(i=self.fe_input.text())} ; Starts fume extractor\n"
             )
@@ -842,7 +890,20 @@ class AMGcodeCalculator(QWidget):
                 error.setForeground(QColor("#ff0000"))
                 self.display.addItem(error)
                 self.display.scrollToBottom()
-
+            
+            valid = True
+            if "laser power" not in csv_data:
+                self.display.addItem("There is no 'laser power' column in the CSV file")
+                valid = False
+            if "scanning speed" not in csv_data:
+                self.display.addItem("There is no 'scanning speed' column in the CSV file")
+                valid = False
+            if "rpm 1" not in csv_data:
+                self.display.addItem("There is no 'rpm 1' column in the CSV file")
+                valid = False
+            if not valid:
+                return None
+            
             self.positions.sort(key=lambda pos: (pos[1], pos[0]))
 
             for i, position in enumerate(self.positions):
@@ -856,38 +917,34 @@ class AMGcodeCalculator(QWidget):
                 self.gcode.append(
                     f"G1 Z{self.sh_input.text()} F{self.nps_input.text()}\n"
                 )
-                try:
-                    r_id, hs_opt_ls, w_l, p_ls, ss_ls, rpm_1, rpm_2, t_ls, layers = (
-                        csv_data.loc[idx % len(csv_data)]
-                    )
-                    # print(idx) # debugging purposes
-                    idx += 1
-                except ValueError:
-                    r_id, hs_opt_ls, w_l, p_ls, ss_ls, rpm_1, rpm_2, t_ls = csv_data.loc[
-                        idx % len(csv_data)
-                    ]
-                    layers = float("inf")
-                    # print(idx) # debugging purposes
-                    idx += 1
+                csv_row = csv_data.loc[idx % len(csv_data)]
+                p_ls = csv_row["laser power"]
+                ss_ls = csv_row["scanning speed"]
+                rpm_1 = csv_row.get("rpm 1", 0)
+                rpm_2 = csv_row.get("rpm 2", 0)
+                hs_opt_ls = csv_row.get("hatch spacing", 1)
+                lh_opt_ls = csv_row.get("layer height", 1)
+                w_l = csv_row.get("width", 1)
+                h_ls = csv_row.get("height", 1)
+                layers = csv_row.get("layers", float("inf"))
+                idx += 1
                 while curr_height <= height:
                     curr_length = 0
                     if n_layers >= layers:
                         # print("functionally graded", i, n_layers, idx) # debugging purposes
-                        (
-                            _,
-                            r_id,
-                            hs_opt_ls,
-                            w_l,
-                            p_ls,
-                            ss_ls,
-                            rpm_1,
-                            rpm_2,
-                            t_ls,
-                            layers,
-                        ) = csv_data.loc[idx % len(csv_data)]
+                        csv_row = csv_data.loc[idx % len(csv_data)]
+                        p_ls = csv_row["laser power"]
+                        ss_ls = csv_row["scanning speed"]
+                        rpm_1 = csv_row.get("rpm 1", 0)
+                        rpm_2 = csv_row.get("rpm 2", 0)
+                        hs_opt_ls = csv_row.get("hatch spacing", 1)
+                        lh_opt_ls = csv_row.get("layer height", 1)
+                        w_l = csv_row.get("width", 1)
+                        h_ls = csv_row.get("height", 1)
+                        layers = csv_row.get("layers", float("inf"))
                         idx += 1
                         n_layers = 0
-                    # self.gcode.append(f"\n;Layer {int(curr_height / t_ls + 1)}, Row {idx}\n") # debugging purposes
+                    # self.gcode.append(f"\n;Layer {int(curr_height / (h_ls * lh_opt_ls) + 1)}, Row {idx}\n") # debugging purposes
                     if rpm_1 != last_rpm_1 or rpm_2 != last_rpm_2:
                         self.gcode.append("\n;===Adjusting deposition rate===")
                         self.gcode.append(
@@ -958,8 +1015,8 @@ class AMGcodeCalculator(QWidget):
                                 x_direction = not x_direction
                                 curr_length += hs_opt_ls * w_l
 
-                    z += t_ls
-                    curr_height += t_ls  # TODO
+                    z += h_ls * lh_opt_ls
+                    curr_height += h_ls * lh_opt_ls # TODO
                     n_layers += 1
                     if vertical:
                         x = position[0] + x_direction * hlength
