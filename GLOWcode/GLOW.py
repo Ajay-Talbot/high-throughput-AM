@@ -26,7 +26,6 @@ from PyQt6.QtWidgets import (
     QFileDialog,
     QScrollArea,
 )
-from PyQt6.QtWebEngineWidgets import QWebEngineView
 
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
