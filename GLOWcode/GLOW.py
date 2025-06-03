@@ -41,6 +41,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 #      Latest update: 28-05-2025      #
 #######################################
 
+APP_DIR = str(Path(__file__).resolve().parent)
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -48,11 +49,11 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("G-Code for Laser Operated Work")
 
         if sys.platform.startswith("win"):
-            app.setWindowIcon(QIcon("img\\icon.ico"))
+            app.setWindowIcon(QIcon(APP_DIR + "\\img\\icon.ico"))
         elif sys.platform == "darwin":
-            app.setWindowIcon(QIcon("img\\icon.icns"))
+            app.setWindowIcon(QIcon(APP_DIR + "\\img\\icon.icns"))
         else:
-            app.setWindowIcon(QIcon("img\\icon.png"))
+            app.setWindowIcon(QIcon(APP_DIR + "\\img\\icon.png"))
         self.resize(1200, 600)
 
         scroll_area = QScrollArea()
@@ -95,8 +96,8 @@ class MainWindow(QMainWindow):
         self.info_dialog.setContentsMargins(20, 0, 20, 20)
         self.info_dialog.move(600, 0)
         self.info_dialog.setWindowTitle("Information")
-        with open("README.md", 'r', encoding='utf-8') as file:
-            md_text = file.read()
+        with open(APP_DIR + "\\README.md", 'r', encoding='utf-8') as f:
+            md_text = f.read()
         
         info = QTextEdit()
         info.setReadOnly(True)
@@ -131,7 +132,7 @@ class AMGcodeCalculator(QWidget):
 
         title_layout = QHBoxLayout()
         title = QLabel()
-        pixmap = QPixmap("img\\title.png")
+        pixmap = QPixmap(APP_DIR + "\\img\\title.png")
         pixmap = pixmap.scaledToHeight(50, Qt.TransformationMode.SmoothTransformation)
         # title.setStyleSheet(
         #     "QLabel {font-family: 'Roboto'; font-size: 24px; font-weight: 700; color: #000000;}"
@@ -252,7 +253,7 @@ class AMGcodeCalculator(QWidget):
         settings_layout = QVBoxLayout(setting_widget)
         settings_layout.setSpacing(3)
         settings_layout.setContentsMargins(20, 10, 20, 20)
-        self.settings = QSettings(str(Path(__file__).resolve().parent / "machine settings\\settings"), QSettings.Format.IniFormat)
+        self.settings = QSettings(APP_DIR + "\\machine settings\\settings", QSettings.Format.IniFormat)
 
         title2 = QLabel("Machine Settings")
         title2.setStyleSheet(
