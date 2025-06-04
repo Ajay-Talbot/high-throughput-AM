@@ -316,7 +316,7 @@ class AMGcodeCalculator(QWidget):
         settings_layout.addLayout(gfr_layout, 1)
 
         wt_layout = QHBoxLayout()
-        wt_label = QLabel("Waiting time after powder feed rate change (s): ")
+        wt_label = QLabel("Waiting time after feed rate change (s): ")
         wt_layout.addWidget(wt_label, 2)
         self.wt_input = QLineEdit()
         self.wt_input.setText(self.settings.value("waiting_time", "30"))
