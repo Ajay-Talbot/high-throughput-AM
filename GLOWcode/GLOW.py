@@ -59,7 +59,7 @@ class MainWindow(QMainWindow):
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
 
-        calculator = AMGcodeCalculator()
+        calculator = GLOWCalculator()
         scroll_area.setWidget(calculator)
 
         self.setCentralWidget(scroll_area)
@@ -111,7 +111,7 @@ class MainWindow(QMainWindow):
         self.info_dialog.show()
 
 
-class AMGcodeCalculator(QWidget):
+class GLOWCalculator(QWidget):
     def __init__(self):
         super().__init__()
 
