@@ -791,18 +791,30 @@ class AMGcodeCalculator(QWidget):
         elif self.substrate_combobox.currentText() == "Circle":
             radius = float(self.substrate_radius.text())
             margin = float(self.margin_c.text())
-            cols = math.ceil(math.sqrt(num))
-            rows = math.ceil(num / cols)
+            # cols = math.ceil(math.sqrt(num))
+            # rows = math.ceil(num / cols)
 
-            grid_width = cols * hlength + (cols - 1) * hdistance
-            grid_height = rows * vlength + (rows - 1) * vdistance
+            configs = []
+            for cols in range(num + 1, 1, -1):
+                rows = math.ceil(num / cols)
 
-            if (grid_width / 2) ** 2 + (grid_height / 2) ** 2 > (radius - margin) ** 2:
+                grid_width = cols * hlength + (cols - 1) * hdistance
+                grid_height = rows * vlength + (rows - 1) * vdistance
+
+                if (grid_width / 2) ** 2 + (grid_height / 2) ** 2 <= (radius - margin) ** 2:
+                    configs.append((cols, rows, cols * rows - num))
+
+            if not configs:
                 self.display.addItem(
-                    f"Cannot fit {num} squares of size {hlength}x{vlength} in a circle of radius {radius}"
+                    f"Cannot fit {num} rectangles of size {hlength}x{vlength} in a circle of radius {radius}"
                 )
                 self.display.scrollToBottom()
                 return False
+            
+            cols, rows = min(configs, key=lambda x: x[2])[:2] # aims for a full grid shape
+
+            grid_width = cols * hlength + (cols - 1) * hdistance
+            grid_height = rows * vlength + (rows - 1) * vdistance
 
             x0 = radius - grid_width / 2
             y0 = radius - grid_height / 2
