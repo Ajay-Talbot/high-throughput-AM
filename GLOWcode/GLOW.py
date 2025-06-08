@@ -1,3 +1,11 @@
+"""
+G.L.O.W. App
+
+Author: Arthur Jiun Wei Hwang
+
+Latest update: 08-06-2025
+"""
+
 import math
 import sys
 import pandas as pd
@@ -32,12 +40,7 @@ import matplotlib.patches as patches
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
-
-#######################################
-#            G.L.O.W. App             #
-#    Author: Arthur Jiun Wei Hwang    #
-#      Latest update: 28-05-2025      #
-#######################################
+from ML import meltpool_geom_cal
 
 
 APP_DIR = str(Path(__file__).resolve().parent)
@@ -147,6 +150,10 @@ class GLOWCalculator(QWidget):
 
         self.filedrop = FileDrop()
         side_tab.addWidget(self.filedrop, 2)
+
+        self.use_ml = QCheckBox("Use ML model prediction")
+        self.use_ml.setChecked(False)
+        side_tab.addWidget(self.use_ml, 1)
 
         side_tab.addStretch(1)
 
@@ -798,10 +805,10 @@ class GLOWCalculator(QWidget):
             for cols in range(num + 1, 1, -1):
                 rows = math.ceil(num / cols)
 
-                grid_width = cols * hlength + (cols - 1) * hdistance
-                grid_height = rows * vlength + (rows - 1) * vdistance
+                half_width = (cols * hlength + (cols - 1) * hdistance) / 2
+                half_height = (rows * vlength + (rows - 1) * vdistance) / 2
 
-                if (grid_width / 2) ** 2 + (grid_height / 2) ** 2 <= (radius - margin) ** 2:
+                if (half_width) ** 2 + (half_height) ** 2 <= (radius - margin) ** 2:
                     configs.append((cols, rows, cols * rows - num))
 
             if not configs:
@@ -810,8 +817,9 @@ class GLOWCalculator(QWidget):
                 )
                 self.display.scrollToBottom()
                 return False
-            
-            cols, rows = min(configs, key=lambda x: x[2])[:2] # aims for a full grid shape
+
+            cols, rows = min(configs, key=lambda x: x[2])[:2]
+            # aims for a full grid shape
 
             grid_width = cols * hlength + (cols - 1) * hdistance
             grid_height = rows * vlength + (rows - 1) * vdistance
@@ -945,8 +953,12 @@ class GLOWCalculator(QWidget):
                 rpm_2 = csv_row.get("rpm 2", 0)
                 hs_opt_ls = csv_row.get("hatch spacing", 1)
                 lh_opt_ls = csv_row.get("layer height", 1)
-                w_l = csv_row.get("width", 1)
-                h_ls = csv_row.get("height", 1)
+                if self.use_ml.isChecked():
+                    w_ls, h_ls = meltpool_geom_cal(p_ls, ss_ls, rpm_1 + rpm_2)
+                else:
+                    w, h = meltpool_geom_cal(p_ls, ss_ls, rpm_1 + rpm_2)
+                    w_ls = csv_row.get("width", w)
+                    h_ls = csv_row.get("height", h)
                 layers = csv_row.get("layers", float("inf"))
                 idx += 1
                 while curr_height <= height:
@@ -960,8 +972,12 @@ class GLOWCalculator(QWidget):
                         rpm_2 = csv_row.get("rpm 2", 0)
                         hs_opt_ls = csv_row.get("hatch spacing", 1)
                         lh_opt_ls = csv_row.get("layer height", 1)
-                        w_l = csv_row.get("width", 1)
-                        h_ls = csv_row.get("height", 1)
+                        if self.use_ml.isChecked():
+                            w_ls, h_ls = meltpool_geom_cal(p_ls, ss_ls, rpm_1 + rpm_2)
+                        else:
+                            w, h = meltpool_geom_cal(p_ls, ss_ls, rpm_1 + rpm_2)
+                            w_ls = csv_row.get("width", w)
+                            h_ls = csv_row.get("height", h)
                         layers = csv_row.get("layers", float("inf"))
                         idx += 1
                         n_layers = 0
@@ -997,9 +1013,9 @@ class GLOWCalculator(QWidget):
                                     "+y",
                                 )
                                 y += vlength
-                                x += hs_opt_ls * w_l * (x_direction * 2 - 1)
+                                x += hs_opt_ls * w_ls * (x_direction * 2 - 1)
                                 y_direction = not y_direction
-                                curr_length += hs_opt_ls * w_l
+                                curr_length += hs_opt_ls * w_ls
                             else:
                                 self.strike_gcode(
                                     (x, y, z),
@@ -1008,9 +1024,9 @@ class GLOWCalculator(QWidget):
                                     "-y",
                                 )
                                 y -= vlength
-                                x += hs_opt_ls * w_l * (x_direction * 2 - 1)
+                                x += hs_opt_ls * w_ls * (x_direction * 2 - 1)
                                 y_direction = not y_direction
-                                curr_length += hs_opt_ls * w_l
+                                curr_length += hs_opt_ls * w_ls
 
                         else:
                             if x_direction:
@@ -1021,9 +1037,9 @@ class GLOWCalculator(QWidget):
                                     "+x",
                                 )
                                 x += hlength
-                                y += hs_opt_ls * w_l * (y_direction * 2 - 1)
+                                y += hs_opt_ls * w_ls * (y_direction * 2 - 1)
                                 x_direction = not x_direction
-                                curr_length += hs_opt_ls * w_l
+                                curr_length += hs_opt_ls * w_ls
                             else:
                                 self.strike_gcode(
                                     (x, y, z),
@@ -1032,9 +1048,9 @@ class GLOWCalculator(QWidget):
                                     "-x",
                                 )
                                 x -= hlength
-                                y += hs_opt_ls * w_l * (y_direction * 2 - 1)
+                                y += hs_opt_ls * w_ls * (y_direction * 2 - 1)
                                 x_direction = not x_direction
-                                curr_length += hs_opt_ls * w_l
+                                curr_length += hs_opt_ls * w_ls
 
                     z += h_ls * lh_opt_ls
                     curr_height += h_ls * lh_opt_ls  # TODO
@@ -1119,8 +1135,8 @@ class GLOWCalculator(QWidget):
     def strike_gcode(self, initial_pos, strike_data, strike_size, strike_direction):
         p_ls, ss_ls = strike_data
         self.gcode.append("\n")
-        # if (abs(initial_pos[0] - self.position[0]) >= (hs_opt_ls * w_l)
-        # or abs(initial_pos[1] - self.position[1]) >= (hs_opt_ls * w_l)):
+        # if (abs(initial_pos[0] - self.position[0]) >= (hs_opt_ls * w_ls)
+        # or abs(initial_pos[1] - self.position[1]) >= (hs_opt_ls * w_ls)):
         #     self.gcode.append(f"G1 Z{self.sh_input.text()} F{self.nps_input.text()}\n")
         self.gcode.append(f"G1 X{initial_pos[0]} Y{initial_pos[1]}\n")
         self.gcode.append(f"G1 Z{initial_pos[2]}\n")
