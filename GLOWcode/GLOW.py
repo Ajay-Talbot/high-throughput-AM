@@ -919,19 +919,48 @@ class GLOWCalculator(QWidget):
                 self.display.scrollToBottom()
 
             valid = True
-            if "laser power" not in csv_data:
+            if "laser_power" not in csv_data:
                 self.display.addItem("There is no 'laser power' column in the CSV file")
                 valid = False
-            if "scanning speed" not in csv_data:
+            if "scanning_speed" not in csv_data:
                 self.display.addItem(
                     "There is no 'scanning speed' column in the CSV file"
                 )
                 valid = False
-            if "rpm 1" not in csv_data:
+            if "rpm_1" not in csv_data and "rpm_2" not in csv_data:
                 self.display.addItem("There is no 'rpm 1' column in the CSV file")
                 valid = False
             if not valid:
                 return None
+
+            ml_w = ("width" not in csv_data or self.use_ml) and shape == "Cube"
+            ml_h = ("height" not in csv_data or self.use_ml) and shape != "Single Track"
+
+            if ml_w or ml_h:
+                width_data = []
+                height_data = []
+                for row in csv_data.itertuples():
+                    w, h = meltpool_geom_cal(
+                        row.laser_power, row.scanning_speed, row.rpm_1 + row.rpm_2
+                    )
+                    if ml_w:
+                        width_data.append(w)
+                    if ml_h:
+                        height_data.append(h)
+
+                if ml_w:
+                    csv_data["width"] = width_data
+                if ml_h:
+                    csv_data["height"] = height_data
+
+                csv_path = self.filedrop.file_path.parent / (
+                    self.filedrop.file_path.stem + "_with_ML_data.csv"
+                )
+                i = 1
+                while csv_path.exists():
+                    csv_path = csv_path.parent / (str(csv_path.stem) + f" ({i}).csv")
+                    i += 1
+                csv_data.to_csv(csv_path, index=False)
 
             self.positions.sort(key=lambda pos: (pos[1], pos[0]))
 
@@ -947,18 +976,14 @@ class GLOWCalculator(QWidget):
                     f"G1 Z{self.sh_input.text()} F{self.nps_input.text()}\n"
                 )
                 csv_row = csv_data.loc[idx % len(csv_data)]
-                p_ls = csv_row["laser power"]
-                ss_ls = csv_row["scanning speed"]
-                rpm_1 = csv_row.get("rpm 1", 0)
-                rpm_2 = csv_row.get("rpm 2", 0)
-                hs_opt_ls = csv_row.get("hatch spacing", 1)
-                lh_opt_ls = csv_row.get("layer height", 1)
-                if self.use_ml.isChecked():
-                    w_ls, h_ls = meltpool_geom_cal(p_ls, ss_ls, rpm_1 + rpm_2)
-                else:
-                    w, h = meltpool_geom_cal(p_ls, ss_ls, rpm_1 + rpm_2)
-                    w_ls = csv_row.get("width", w)
-                    h_ls = csv_row.get("height", h)
+                p_ls = csv_row["laser_power"]
+                ss_ls = csv_row["scanning_speed"]
+                rpm_1 = csv_row.get("rpm_1", 0)
+                rpm_2 = csv_row.get("rpm_2", 0)
+                hs_opt_ls = csv_row.get("hatch_spacing", 1)
+                lh_opt_ls = csv_row.get("layer_height", 1)
+                w_ls = csv_row.get("width", 1)
+                h_ls = csv_row.get("height", 1)
                 layers = csv_row.get("layers", float("inf"))
                 idx += 1
                 while curr_height <= height:
@@ -966,18 +991,14 @@ class GLOWCalculator(QWidget):
                     if n_layers >= layers:
                         # print("functionally graded", i, n_layers, idx) # debugging purposes
                         csv_row = csv_data.loc[idx % len(csv_data)]
-                        p_ls = csv_row["laser power"]
-                        ss_ls = csv_row["scanning speed"]
-                        rpm_1 = csv_row.get("rpm 1", 0)
-                        rpm_2 = csv_row.get("rpm 2", 0)
-                        hs_opt_ls = csv_row.get("hatch spacing", 1)
-                        lh_opt_ls = csv_row.get("layer height", 1)
-                        if self.use_ml.isChecked():
-                            w_ls, h_ls = meltpool_geom_cal(p_ls, ss_ls, rpm_1 + rpm_2)
-                        else:
-                            w, h = meltpool_geom_cal(p_ls, ss_ls, rpm_1 + rpm_2)
-                            w_ls = csv_row.get("width", w)
-                            h_ls = csv_row.get("height", h)
+                        p_ls = csv_row["laser_power"]
+                        ss_ls = csv_row["scanning_speed"]
+                        rpm_1 = csv_row.get("rpm_1", 0)
+                        rpm_2 = csv_row.get("rpm_2", 0)
+                        hs_opt_ls = csv_row.get("hatch_spacing", 1)
+                        lh_opt_ls = csv_row.get("layer_height", 1)
+                        w_ls = csv_row.get("width", 1)
+                        h_ls = csv_row.get("height", 1)
                         layers = csv_row.get("layers", float("inf"))
                         idx += 1
                         n_layers = 0

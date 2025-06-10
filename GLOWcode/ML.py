@@ -9,10 +9,9 @@ Contains helper functions and result visualization functions
 """
 
 import cv2
-import matplotlib.pyplot as plt
-import numpy as np
 import joblib
 import warnings
+import numpy as np
 from keras.models import load_model
 from pathlib import Path
 
@@ -33,12 +32,20 @@ sc = joblib.load(model_path + "sc.bin")
 # calculate meltpool geometries from prediction. Can also visualize/save the meltpool. The input mp is the
 # prediction directly from para2geom model.
 # Input units must be e.g. power 40 speed 480 rpm 0.4
-def meltpool_geom_cal(power, speed, rpm, plot=False, save_path="", para2geom=para2geom, para2geom_pca=para2geom_pca, sc=sc):
+def meltpool_geom_cal(
+    power,
+    speed,
+    rpm,
+    para2geom=para2geom,
+    para2geom_pca=para2geom_pca,
+    sc=sc,
+):
     scale_measured = 0.0038  # length of mm for 1 pix for a 1280x960 image. Measured on 20240607 using /home/xiao/projects/DED/BO_processing/images/20240418_singletrack_data_retake/scale_bar_67um_mp10&11.jpg
     resize_dim = (96, 96)  # original size (550,550), cropped to (96,96)
     scale = (
         scale_measured / resize_dim[1] * 550
     )  # this is the scale to transfer predicted pix value to mm
+    # maybe change
 
     input_sc = sc.transform([[power, rpm, speed]])
     mp = para2geom.predict(input_sc, verbose=0)
@@ -60,39 +67,14 @@ def meltpool_geom_cal(power, speed, rpm, plot=False, save_path="", para2geom=par
     # Calculate the centres
     # y_centre = (y_ext_l+y_ext_r)/2
     y_centre = y_ext
-    x_centre = (x_ext_l + x_ext_r) / 2
 
     mask_y = np.sum(mp_true, axis=1)
     y_ext_high = (mask_y != 0).argmax(axis=0)
-    y_ext_low = y_ext_high + np.count_nonzero(mask_y) - 1
 
     # extract meltpool width and tilt angle from print bed
     # width = ((x_ext_l-x_ext_r)**2+(y_ext_l-y_ext_r)**2)**0.5*scale
     width = x_ext_r - x_ext_l
     height = abs(y_ext_high - y_centre)
-    depth = abs(y_ext_low - y_centre)
 
-    if plot:
-        fig = plt.figure()
-        plt.imshow(mp_true)
-        lines = True
-        if lines:
-            # draw the width, height, and depth
-            plt.plot([x_ext_l, x_ext_r], [y_ext, y_ext])
-            plt.plot([x_centre, x_centre], [y_centre, y_ext_high])
-            plt.plot([x_centre, x_centre], [y_centre, y_ext_low])
-        # plt.axis('off')
-        plt.title(
-            "Predicted meltpool for P = {0}, v = {1}, rpm = {2}".format(
-                power, speed, rpm
-            )
-        )
-        if save_path != "":
-            plt.savefig(save_path)
-        plt.close()
-
-    A_top = mp_true[0 : int(y_ext)].sum()
-    A = mp_true.sum()
-    dilution = 1 - A_top / A
     # print('The width is {0}'.format(width))
     return width * scale, height * scale

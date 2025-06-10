@@ -1,23 +1,38 @@
 <!-- Ctrl + Shift + V to read -->
-# G.L.O.W. App <sub><sup><sub> by Arthur Hwang </sub></sup></sub> <br/>
+# G.L.O.W. Documentation <sub><sup><sub> by Arthur Hwang </sub></sup></sub> <br/>
 
 ## G-Code Generator
 
 ### The CSV file
 Each row of the CSV file must contain its printing information, including:
+
  - `idx` : is the index of the row;
- - `laser power` : is the laser power used as a % of 1 kW total power (e.g. 50);
- - `scanning speed` : is the scanning speed of the print, in mm/min;
- - `rpm 1` : is the rpm for hopper 1;
- - `rpm 2` : is the rpm for hopper 2 (optional);
- - `width` : is the width of the printed tracks, in mm (optional if using ML prediction);
- - `height` : is the height of the printed tracks, in mm (optional if using ML prediction);
- - `hatch spacing` : is the ideal spacing between adjacent tracks as a fraction (e.g. 0.5) of `width` (optional if not printing Cube);
- - `layer height` : is the ideal spacing between successive layers as a fraction (e.g. 0.5) of `height` (optional);
+ - `laser_power` : is the laser power used as a % of 1 kW total power (e.g. 50);
+ - `scanning_speed` : is the scanning speed of the print, in mm/min;
+ - `rpm_1` : is the rpm for hopper 1;
+ - `rpm_2` : is the rpm for hopper 2;
+ - `width` : is the width of the printed tracks, in mm (optional);
+ - `height` : is the height of the printed tracks, in mm (optional);
+ - `hatch_spacing` : is the ideal spacing between adjacent tracks as a fraction (e.g. 0.5) of `width` (optional if not printing Cube);
+ - `layer_height` : is the ideal spacing between successive layers as a fraction (e.g. 0.5) of `height` (optional);
  - `layers` : is the number of layers that each row will be used in, the code will automatically change the row between objects (optional);
+
+Obs.: the heading must contain the column name as specified above.
+
+Obs.: at least one rpm column must be on the CSV file.
+
+Obs.: if `width` or `height` is missing and it is required for the G-Code, the Machine Learning model will be used to predict it.
+
+### Using ML model prediction
+This option allows users to use a trained (in single powder prints) Machine Learning model to predict the width and height of the tracks.
+
+Whenever the ML model is used, a new CSV file will be created in the same folder as the original CSV file.
+
+The new file will be named as the CSV file used, ending with "_with_ML_prediction".
 
 ### Printing shape
 There are three types of supported shapes: Single Track, Thin Wall and Cube. Each type has its own parameters:
+
  - `Length` : is the X-Y dimension of the object, in mm;
  - `Height` : is the Z dimension of the object, in mm;
  - `Number` : is the amount of objects to be printed;
@@ -27,6 +42,7 @@ There are three types of supported shapes: Single Track, Thin Wall and Cube. Eac
 
 ### Substract shape
 There are two types of supported substract: Rectangle and Circle. Each type has its own parameters:
+
  - `width` : is the width of the substrate in the X direction, in mm (for Rectangle);
  - `height` : is the height of the substrate in the Y direction, in mm (for Rectangle);
  - `radius` : is the radius of the substrate, in mm (for Circle);
@@ -34,15 +50,19 @@ There are two types of supported substract: Rectangle and Circle. Each type has 
 
 ### Calculate
 This button will calculate the position of each object (if all objects fit in the substrate), and plot the outcome in `Printing Configuration`.
+
 Obs.: the code creates a rectangle within which are the objects and analyze the fitting of it in the substrate.
 
 ### Add position
 When clicking in the plot from `Printing Configuration` a point (x, y) will be selected.
+
 This button allows the selected point to be used as the bottom-left corner to create a new object.
 
 ### Generate G-Code
 This button will take all inputs and generate save in a `.gcode` file.
+
 The G-Code will follow some rules:
+
  - The objects will be printed in rows, from left to right and bottom to top;
  - In each object, the print will start in the bottom-left corner, moving up if printing vertically or moving right if printing horizontally;
  - For thin walls, each other layer will have the printing direction inverted;
@@ -64,7 +84,7 @@ The interface has both graphical and text displays, that allow user to view curr
 
 ### Machine Specific Code
  - indices: are the number by which the machine refers to each component;
- - codes: are the specific code used to call each function; by clicking in each code, it shows additional description and allows the code to be changed
+ - codes: are the specific code used to call each function; by clicking in each code, it shows additional description and allows the code to be changed;
 
 ### Reset & Save
  - `Reset` : resets the configuration to the last saved one;
