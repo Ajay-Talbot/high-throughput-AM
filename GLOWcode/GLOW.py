@@ -17,6 +17,7 @@ from PyQt6.QtWidgets import (
     QApplication,
     QMainWindow,
     QDialog,
+    QFrame,
     QWidget,
     QTabWidget,
     QStackedWidget,
@@ -178,6 +179,7 @@ class GLOWCalculator(QWidget):
         side_tab.addWidget(self.stack, 4)
 
         self.horizontal = QCheckBox("Print horizontally")
+        self.horizontal.setChecked(False)
         side_tab.addWidget(self.horizontal, 1)
 
         substrate_layout = QHBoxLayout()
@@ -285,14 +287,18 @@ class GLOWCalculator(QWidget):
         dir_layout.addStretch(5)
         settings_layout.addLayout(dir_layout, 1)
 
+        print_setting = QHBoxLayout()
+
+        column_1 = QVBoxLayout()
+
         sh_layout = QHBoxLayout()
         sh_label = QLabel("Safe height (mm): ")
         sh_layout.addWidget(sh_label, 1)
         self.sh_input = QLineEdit()
         self.sh_input.setText(self.settings.value("safe_height", "25"))
         sh_layout.addWidget(self.sh_input, 1)
-        sh_layout.addStretch(8)
-        settings_layout.addLayout(sh_layout, 1)
+        sh_layout.addStretch(3)
+        column_1.addLayout(sh_layout, 1)
 
         nps_layout = QHBoxLayout()
         nps_label = QLabel("Not printing speed (mm/min): ")
@@ -300,8 +306,8 @@ class GLOWCalculator(QWidget):
         self.nps_input = QLineEdit()
         self.nps_input.setText(self.settings.value("not_print_speed", "3900"))
         nps_layout.addWidget(self.nps_input, 1)
-        nps_layout.addStretch(8)
-        settings_layout.addLayout(nps_layout, 1)
+        nps_layout.addStretch(3)
+        column_1.addLayout(nps_layout, 1)
 
         # Laser absolute power
         # lsp_layout = QHBoxLayout()
@@ -310,8 +316,8 @@ class GLOWCalculator(QWidget):
         # self.lsp_input = QLineEdit()
         # self.lsp_input.setText(self.settings.value("laser_power", "1000"))
         # lsp_layout.addWidget(self.lsp_input, 1)
-        # lsp_layout.addStretch(8)
-        # settings_layout.addLayout(lsp_layout, 1)
+        # lsp_layout.addStretch(3)
+        # column_1.addLayout(lsp_layout, 1)
 
         gfr_layout = QHBoxLayout()
         gfr_label = QLabel("Gas flow rate (L/min): ")
@@ -319,8 +325,8 @@ class GLOWCalculator(QWidget):
         self.gfr_input = QLineEdit()
         self.gfr_input.setText(self.settings.value("gas_flow_rate", "2.5"))
         gfr_layout.addWidget(self.gfr_input, 1)
-        gfr_layout.addStretch(8)
-        settings_layout.addLayout(gfr_layout, 1)
+        gfr_layout.addStretch(3)
+        column_1.addLayout(gfr_layout, 1)
 
         wt_layout = QHBoxLayout()
         wt_label = QLabel("Waiting time after feed rate change (s): ")
@@ -328,8 +334,61 @@ class GLOWCalculator(QWidget):
         self.wt_input = QLineEdit()
         self.wt_input.setText(self.settings.value("waiting_time", "30"))
         wt_layout.addWidget(self.wt_input, 1)
-        wt_layout.addStretch(7)
-        settings_layout.addLayout(wt_layout, 1)
+        wt_layout.addStretch(2)
+        column_1.addLayout(wt_layout, 1)
+
+        print_setting.addLayout(column_1, 1)
+
+        column_2 = QVBoxLayout()
+
+        cdt_layout = QHBoxLayout()
+        cdt_label = QLabel("Cooldown intertracks (s): ")
+        cdt_layout.addWidget(cdt_label, 1)
+        self.cdt_input = QLineEdit()
+        self.cdt_input.setText(self.settings.value("cooldown_intertracks", "0"))
+        cdt_layout.addWidget(self.cdt_input, 1)
+        cdt_layout.addStretch(3)
+        column_2.addLayout(cdt_layout, 1)
+
+        cdl_layout = QHBoxLayout()
+        cdl_label = QLabel("Cooldown interlayers (s): ")
+        cdl_layout.addWidget(cdl_label, 1)
+        self.cdl_input = QLineEdit()
+        self.cdl_input.setText(self.settings.value("cooldown_interlayers", "0"))
+        cdl_layout.addWidget(self.cdl_input, 1)
+        cdl_layout.addStretch(3)
+        column_2.addLayout(cdl_layout, 1)
+
+        cdo_layout = QHBoxLayout()
+        cdo_label = QLabel("Cooldown interobjects (s): ")
+        cdo_layout.addWidget(cdo_label, 1)
+        self.cdo_input = QLineEdit()
+        self.cdo_input.setText(self.settings.value("cooldown_interobjects", "0"))
+        cdo_layout.addWidget(self.cdo_input, 1)
+        cdo_layout.addStretch(3)
+        column_2.addLayout(cdo_layout, 1)
+
+        camera_layout = QHBoxLayout()
+        self.use_camera = QCheckBox("Use camera")
+        self.use_camera.setChecked(False)
+        camera_layout.addWidget(self.use_camera, 1)
+
+        camera_button = QPushButton("Settings", clicked=self.open_camera_settings)
+        camera_layout.addWidget(camera_button, 1)
+        camera_layout.addStretch(3)
+
+        self.camera_exposure = QLineEdit()
+        self.camera_exposure.setText(self.settings.value("camera_exposure_time", "25"))
+        self.camera_delay = QLineEdit()
+        self.camera_delay.setText(self.settings.value("camera_start_delay", "0"))
+        self.camera_interval = QLineEdit()
+        self.camera_interval.setText(
+            self.settings.value("camera_sampling_interval", "0.05")
+        )
+
+        column_2.addLayout(camera_layout, 1)
+        print_setting.addLayout(column_2, 1)
+        settings_layout.addLayout(print_setting, 4)
 
         settings_layout.addStretch(1)
 
@@ -355,6 +414,14 @@ class GLOWCalculator(QWidget):
             ),
             "gcode_set_dispenser_speed": self.settings.value(
                 "gcode_set_dispenser_speed", "M205 (H_{i}_V_{v})"
+            ),
+            "gcode_camera_on": self.settings.value(
+                "gcode_camera_on", "M207 (ON_EXP_{e})"
+            ),
+            "gcode_camera_off": self.settings.value("gcode_camera_off", "M207 (OFF)"),
+            "gcode_camera_start": self.settings.value(
+                "gcode_camera_start",
+                "M208 (P_{p}_V_{v}_layer_{l}_track_{i}_delaystart_{d}_interval_{t})",
             ),
         }
 
@@ -412,6 +479,8 @@ class GLOWCalculator(QWidget):
         ac2_layout.addStretch(6)
         mscode_setting_layout.addLayout(ac2_layout, 1)
 
+        mscode_setting_layout.addStretch(1)
+
         setting_list = QListWidget()
         setting_list.setStyleSheet(
             """
@@ -459,7 +528,7 @@ class GLOWCalculator(QWidget):
         dispenser_speed = QListWidgetItem("DISPENSER SPEED")
         dispenser_speed.setToolTip(self.mscode["gcode_set_dispenser_speed"])
         setting_list.addItem(dispenser_speed)
-        mscode_setting_layout.addWidget(setting_list, 11)
+        mscode_setting_layout.addWidget(setting_list, 8)
 
         mscode_layout.addLayout(mscode_setting_layout, 5)
         mscode_layout.addStretch(5)
@@ -890,13 +959,20 @@ class GLOWCalculator(QWidget):
             self.gcode.append("G21 ; set units to millimeters\n")
             self.gcode.append("T11 G43 H11 M6 ; set tool as T11, perform tool change\n")
             self.gcode.append(
-                f"{self.mscode['gcode_start_flow'].format(i=self.fe_input.text())} ; Starts fume extractor\n"
+                f"{self.mscode['gcode_start_flow'].format(i=self.fe_input.text())} ; start fume extractor\n"
             )
             self.gcode.append(
-                f"{self.mscode['gcode_start_flow'].format(i=self.apg_input.text())} ; Starts argon purge gas\n"
+                f"{self.mscode['gcode_start_flow'].format(i=self.apg_input.text())} ; start argon purge gas\n"
             )
-            self.gcode.append("G4 P0.001 ; Added because G1 being skipped\n")
-            self.gcode.append(f"{self.mscode['gcode_laser_on']} ; Turn on the laser\n")
+            self.gcode.append("G4 P0.001 ; added because G1 being skipped\n")
+            if self.use_camera.isChecked():
+                self.gcode.append(
+                    f"{self.mscode['gcode_camera_on'].format(e=self.camera_exposure.text())} ; turn camera on"
+                )
+            self.gcode.append(
+                f"{self.mscode['gcode_laser_power'].format(p=0)} ; set laser power to 0%"
+            )
+            self.gcode.append(f"{self.mscode['gcode_laser_on']} ; turn on the laser\n")
 
             try:
                 csv_data = pd.read_csv(self.filedrop.file_path)
@@ -965,10 +1041,13 @@ class GLOWCalculator(QWidget):
             self.positions.sort(key=lambda pos: (pos[1], pos[0]))
 
             for i, position in enumerate(self.positions):
+                if i > 0:
+                    self.gcode.append( f"\nG4 P{self.cdo_input.text()} ; add cooldown between objects\n")
                 self.gcode.append(f"\n;===Starting {shape} {i + 1}===\n")
                 x, y, z = position
                 curr_height = 0
                 n_layers = 0
+                curr_layer = 0
                 vertical = not self.horizontal.isChecked()
                 x_direction = True
                 y_direction = True
@@ -987,7 +1066,10 @@ class GLOWCalculator(QWidget):
                 layers = csv_row.get("layers", float("inf"))
                 idx += 1
                 while curr_height <= height:
+                    if curr_layer > 0:
+                        self.gcode.append(f"\nG4 P{self.cdl_input.text()}; add cooldown between layers\n")
                     curr_length = 0
+                    curr_track = 0
                     if n_layers >= layers:
                         # print("functionally graded", i, n_layers, idx) # debugging purposes
                         csv_row = csv_data.loc[idx % len(csv_data)]
@@ -1018,13 +1100,15 @@ class GLOWCalculator(QWidget):
                             f"{self.mscode['gcode_set_dispenser_speed'].format(i=self.ac2_input.text(), v=self.gfr_input.text())} ; Argon carrier gas flow rate hopper 2\n"
                         )
                         self.gcode.append(
-                            f"G4 P{self.wt_input.text()} ; Powder stabilization\n"
+                            f"G4 P{self.wt_input.text()} ; powder stabilization\n"
                         )
                         last_rpm_1 = rpm_1
                         last_rpm_2 = rpm_2
                     while curr_length <= (
                         hlength * vertical + vlength * (not vertical)
                     ):  # TODO : assumes hlength == v_length
+                        if curr_track > 0:
+                            self.gcode.append(f"\nG4 P{self.cdt_input.text()} ; add cooldown between tracks\n")
                         if vertical:
                             if y_direction:
                                 self.strike_gcode(
@@ -1032,22 +1116,28 @@ class GLOWCalculator(QWidget):
                                     (p_ls, ss_ls),
                                     vlength,
                                     "+y",
+                                    curr_layer,
+                                    curr_track,
                                 )
                                 y += vlength
                                 x += hs_opt_ls * w_ls * (x_direction * 2 - 1)
                                 y_direction = not y_direction
                                 curr_length += hs_opt_ls * w_ls
+                                curr_track += 1
                             else:
                                 self.strike_gcode(
                                     (x, y, z),
                                     (p_ls, ss_ls),
                                     vlength,
                                     "-y",
+                                    curr_layer,
+                                    curr_track,
                                 )
                                 y -= vlength
                                 x += hs_opt_ls * w_ls * (x_direction * 2 - 1)
                                 y_direction = not y_direction
                                 curr_length += hs_opt_ls * w_ls
+                                curr_track += 1
 
                         else:
                             if x_direction:
@@ -1056,26 +1146,33 @@ class GLOWCalculator(QWidget):
                                     (p_ls, ss_ls),
                                     hlength,
                                     "+x",
+                                    curr_layer,
+                                    curr_track,
                                 )
                                 x += hlength
                                 y += hs_opt_ls * w_ls * (y_direction * 2 - 1)
                                 x_direction = not x_direction
                                 curr_length += hs_opt_ls * w_ls
+                                curr_track += 1
                             else:
                                 self.strike_gcode(
                                     (x, y, z),
                                     (p_ls, ss_ls),
                                     hlength,
                                     "-x",
+                                    curr_layer,
+                                    curr_track,
                                 )
                                 x -= hlength
                                 y += hs_opt_ls * w_ls * (y_direction * 2 - 1)
                                 x_direction = not x_direction
                                 curr_length += hs_opt_ls * w_ls
+                                curr_track += 1
 
                     z += h_ls * lh_opt_ls
                     curr_height += h_ls * lh_opt_ls  # TODO
                     n_layers += 1
+                    curr_layer += 1
                     if vertical:
                         x = position[0] + x_direction * hlength
                         x_direction = not x_direction
@@ -1086,26 +1183,31 @@ class GLOWCalculator(QWidget):
                     if shape == "Cube":
                         vertical = not vertical
 
+            self.gcode.append("G4 P0.001 ; added because G1 is being skipped\n")
+            if self.use_camera.isChecked():
+                self.gcode.append(
+                    f"{self.mscode['gcode_camera_off']} ; turn off camera"
+                )
             self.gcode.append(
-                f"\n{self.mscode['gcode_laser_off']} ; Turn off the laser\n"
+                f"\n{self.mscode['gcode_laser_off']} ; turn off the laser\n"
             )
             self.gcode.append(
-                f"{self.mscode['gcode_stop_flow'].format(i=self.apg_input.text())} ; Stops Argon purge gas\n"
+                f"{self.mscode['gcode_stop_flow'].format(i=self.apg_input.text())} ; stop Argon purge gas\n"
             )
             self.gcode.append(
-                f"{self.mscode['gcode_stop_flow'].format(i=self.fe_input.text())} ; Stops fume extractor\n"
+                f"{self.mscode['gcode_stop_flow'].format(i=self.fe_input.text())} ; stop fume extractor\n"
             )
             self.gcode.append(
-                f"{self.mscode['gcode_set_dispenser_speed'].format(i=self.h1_input.text(), v=0)} ; Turn off hopper 1\n"
+                f"{self.mscode['gcode_set_dispenser_speed'].format(i=self.h1_input.text(), v=0)} ; turn off hopper 1\n"
             )
             self.gcode.append(
-                f"{self.mscode['gcode_set_dispenser_speed'].format(i=self.ac1_input.text(), v=0)} ; Turn off hopper 1 carrier gas\n"
+                f"{self.mscode['gcode_set_dispenser_speed'].format(i=self.ac1_input.text(), v=0)} ; turn off hopper 1 carrier gas\n"
             )
             self.gcode.append(
-                f"{self.mscode['gcode_set_dispenser_speed'].format(i=self.h2_input.text(), v=0)} ; Turn off hopper 2\n"
+                f"{self.mscode['gcode_set_dispenser_speed'].format(i=self.h2_input.text(), v=0)} ; turn off hopper 2\n"
             )
             self.gcode.append(
-                f"{self.mscode['gcode_set_dispenser_speed'].format(i=self.ac2_input.text(), v=0)} ; Turn off hopper 2 carrier gas\n"
+                f"{self.mscode['gcode_set_dispenser_speed'].format(i=self.ac2_input.text(), v=0)} ; turn off hopper 2 carrier gas\n"
             )
 
             save_file = None
@@ -1153,7 +1255,9 @@ class GLOWCalculator(QWidget):
                 self.display.addItem(error)
                 self.display.scrollToBottom()
 
-    def strike_gcode(self, initial_pos, strike_data, strike_size, strike_direction):
+    def strike_gcode(
+        self, initial_pos, strike_data, strike_size, strike_direction, layer, track
+    ):
         p_ls, ss_ls = strike_data
         self.gcode.append("\n")
         # if (abs(initial_pos[0] - self.position[0]) >= (hs_opt_ls * w_ls)
@@ -1161,7 +1265,21 @@ class GLOWCalculator(QWidget):
         #     self.gcode.append(f"G1 Z{self.sh_input.text()} F{self.nps_input.text()}\n")
         self.gcode.append(f"G1 X{initial_pos[0]} Y{initial_pos[1]}\n")
         self.gcode.append(f"G1 Z{initial_pos[2]}\n")
-        self.gcode.append("G4 P0.001\n")
+        if self.use_camera.isChecked():
+            self.gcode.append("G4 P0.001 ; added because G1 is being skipped\n")
+            self.gcode.append(
+                f"""{
+                    self.mscode["gcode_camera_start"].format(
+                        p=p_ls,
+                        v=ss_ls,
+                        l=layer,
+                        i=track,
+                        d=self.camera_delay,
+                        t=self.camera_interval,
+                    )
+                } ; starting the camera"""
+            )
+        self.gcode.append("G4 P0.001 ; added because G1 is being skipped\n")
         self.gcode.append(f"{self.mscode['gcode_laser_power'].format(p=p_ls)}\n")
         if strike_direction == "+x":
             self.gcode.append(f"G1 X{initial_pos[0] + strike_size} F{ss_ls}\n")
@@ -1188,10 +1306,10 @@ class GLOWCalculator(QWidget):
             self.gcode.append(f"G1 Y{initial_pos[1] - strike_size} F{ss_ls}\n")
             self.position = (
                 initial_pos[0],
-                initial_pos[1] + strike_size,
+                initial_pos[1] - strike_size,
                 initial_pos[2],
             )
-        self.gcode.append("G4 P0.001\n")
+        self.gcode.append("G4 P0.001 ; added because G1 is being skipped\n")
         self.gcode.append(f"{self.mscode['gcode_laser_power'].format(p=0)}\n")
 
     def browse(self, event: QMouseEvent):
@@ -1200,6 +1318,73 @@ class GLOWCalculator(QWidget):
         )
         if file_str != "":
             self.dir_input.setText(str(Path(file_str)))
+
+    def open_camera_settings(self):
+        button = self.sender()
+        button_pos = button.mapToGlobal(button.rect().bottomLeft())
+
+        camera_dropdown = QFrame(self, Qt.WindowType.Popup)
+        camera_dropdown.move(button_pos)
+        camera_dropdown.setFrameShape(QFrame.Shape.Box)
+        camera_dropdown.setContentsMargins(20, 10, 20, 20)
+        camera_dropdown.setWindowTitle("Camera settings")
+
+        camera_layout = QVBoxLayout(camera_dropdown)
+
+        camera_exposure_layout = QHBoxLayout()
+        camera_exposure_label = QLabel("Camera exposure time (s): ")
+        camera_exposure_layout.addWidget(camera_exposure_label, 1)
+        camera_exposure_layout.addWidget(self.camera_exposure, 1)
+        camera_layout.addLayout(camera_exposure_layout, 1)
+
+        camera_delay_layout = QHBoxLayout()
+        camera_delay_label = QLabel("Camera start delay (s): ")
+        camera_delay_layout.addWidget(camera_delay_label, 1)
+        camera_delay_layout.addWidget(self.camera_delay, 1)
+        camera_layout.addLayout(camera_delay_layout, 1)
+
+        camera_interval_layout = QHBoxLayout()
+        camera_interval_label = QLabel("Camera sampling interval (s): ")
+        camera_interval_layout.addWidget(camera_interval_label, 1)
+        camera_interval_layout.addWidget(self.camera_interval, 1)
+        camera_layout.addLayout(camera_interval_layout, 1)
+
+        camera_list = QListWidget()
+        camera_list.setStyleSheet(
+            """
+            QListWidget {
+                background-color: #f0f0f0;
+                color: #000000;
+            }
+            QListWidget::item {
+                border-bottom: 1px solid #b0b0b0;
+                border-right: 1px solid #c0c0c0;
+                color: #000000;
+            }
+            QListWidget::item:selected {
+                background-color: #f0f0f0; 
+                color: #000000;       
+            }
+            QListWidget::item:hover {
+                background-color: #e0e0e0;
+                color: #000000;
+            }
+        """
+        )
+        camera_list.itemClicked.connect(self.open_dialog)
+
+        camera_on = QListWidgetItem("CAMERA ON")
+        camera_on.setToolTip(self.mscode["gcode_camera_on"])
+        camera_list.addItem(camera_on)
+        camera_off = QListWidgetItem("CAMERA OFF")
+        camera_off.setToolTip(self.mscode["gcode_camera_off"])
+        camera_list.addItem(camera_off)
+        camera_start = QListWidgetItem("CAMERA START")
+        camera_start.setToolTip(self.mscode["gcode_camera_start"])
+        camera_list.addItem(camera_start)
+        camera_layout.addWidget(camera_list, 3)
+
+        camera_dropdown.show()
 
     def open_dialog(self, item):
         if item.text() == "START FLOW":
@@ -1426,6 +1611,95 @@ class GLOWCalculator(QWidget):
             layout.addLayout(buttons, 1)
             dialog.exec()
 
+        elif item.text() == "CAMERA ON":
+            dialog = QDialog()
+            dialog.setContentsMargins(20, 10, 20, 20)
+            dialog.setWindowTitle("CAMERA ON")
+            layout = QVBoxLayout(dialog)
+            description = QLabel(
+                "Defines when the camera is powered on\n - {e} : is the exposure time of the camera after it starts recording"
+            )
+            description.setWordWrap(True)
+            description.setStyleSheet("QLabel { border: 1px solid gray }")
+            layout.addWidget(description, 2)
+            ms_code = QLineEdit()
+            ms_code.setText(self.mscode["gcode_camera_on"])
+            layout.addWidget(ms_code, 1)
+            buttons = QHBoxLayout()
+            buttons.addStretch(2)
+            cancel = QPushButton("Cancel", clicked=dialog.close)
+            buttons.addWidget(cancel, 1)
+            ok = QPushButton(
+                "Ok",
+                clicked=lambda: (
+                    self.ok("gcode_camera_on", ms_code.text()),
+                    dialog.close(),
+                ),
+            )
+            buttons.addWidget(ok, 1)
+            layout.addLayout(buttons, 1)
+            dialog.exec()
+
+        elif item.text() == "CAMERA OFF":
+            dialog = QDialog()
+            dialog.setContentsMargins(20, 10, 20, 20)
+            dialog.setWindowTitle("CAMERA OFF")
+            layout = QVBoxLayout(dialog)
+            description = QLabel("Defines when the camera is powered off")
+            description.setWordWrap(True)
+            description.setStyleSheet("QLabel { border: 1px solid gray }")
+            layout.addWidget(description, 2)
+            ms_code = QLineEdit()
+            ms_code.setText(self.mscode["gcode_camera_off"])
+            layout.addWidget(ms_code, 1)
+            buttons = QHBoxLayout()
+            buttons.addStretch(2)
+            cancel = QPushButton("Cancel", clicked=dialog.close)
+            buttons.addWidget(cancel, 1)
+            ok = QPushButton(
+                "Ok",
+                clicked=lambda: (
+                    self.ok("gcode_camera_off", ms_code.text()),
+                    dialog.close(),
+                ),
+            )
+            buttons.addWidget(ok, 1)
+            layout.addLayout(buttons, 1)
+            dialog.exec()
+
+        elif item.text() == "CAMERA START":
+            dialog = QDialog()
+            dialog.setContentsMargins(20, 10, 20, 20)
+            dialog.setWindowTitle("CAMERA START")
+            layout = QVBoxLayout(dialog)
+            description = QLabel(
+                "Defines when the camera starts recording\n"
+                " - {p} : is the power used in the print\n"
+                " - {v} : is the scanning speed used in the print\n"
+                " - {d} : is the delay to start recording\n"
+                " - {t} : is the sampling interval"
+            )
+            description.setWordWrap(True)
+            description.setStyleSheet("QLabel { border: 1px solid gray }")
+            layout.addWidget(description, 2)
+            ms_code = QLineEdit()
+            ms_code.setText(self.mscode["gcode_camera_start"])
+            layout.addWidget(ms_code, 1)
+            buttons = QHBoxLayout()
+            buttons.addStretch(2)
+            cancel = QPushButton("Cancel", clicked=dialog.close)
+            buttons.addWidget(cancel, 1)
+            ok = QPushButton(
+                "Ok",
+                clicked=lambda: (
+                    self.ok("gcode_camera_start", ms_code.text()),
+                    dialog.close(),
+                ),
+            )
+            buttons.addWidget(ok, 1)
+            layout.addLayout(buttons, 1)
+            dialog.exec()
+
     def ok(self, key, mscode):
         self.mscode[key] = mscode
 
@@ -1438,6 +1712,14 @@ class GLOWCalculator(QWidget):
         # self.lsp_input.setText(self.settings.value("laser_power", "1000"))
         self.gfr_input.setText(self.settings.value("gas_flow_rate", "2.5"))
         self.wt_input.setText(self.settings.value("waiting_time", "30"))
+        self.cdt_input.setText(self.settings.value("cooldown_intertracks", "0"))
+        self.cdl_input.setText(self.settings.value("cooldown_interlayers", "0"))
+        self.cdo_input.setText(self.settings.value("cooldown_interobjects", "0"))
+        self.camera_exposure.setText(self.settings.value("camera_exposure_time", "25"))
+        self.camera_delay.setText(self.settings.value("camera_start_delay", "0"))
+        self.camera_interval.setText(
+            self.settings.value("camera_sampling_interval", "0.05")
+        )
         self.mscode = {
             "gcode_start_flow": self.settings.value("gcode_start_flow", "M64 P{i}"),
             "gcode_stop_flow": self.settings.value("gcode_stop_flow", "M65 P{i}"),
@@ -1455,6 +1737,14 @@ class GLOWCalculator(QWidget):
             "gcode_set_dispenser_speed": self.settings.value(
                 "gcode_set_dispenser_speed", "M205 (H_{i}_V_{v})"
             ),
+            "gcode_camera_on": self.settings.value(
+                "gcode_camera_on", "M207 (ON_EXP_{e})"
+            ),
+            "gcode_camera_off": self.settings.value("gcode_camera_off", "M207 (OFF)"),
+            "gcode_camera_start": self.settings.value(
+                "gcode_camera_start",
+                "M208 (P_{p}_V_{v}_layer_{l}_track_{i}_delaystart_{d}_interval_{t})",
+            ),
         }
 
     def save_settings(self):
@@ -1464,6 +1754,12 @@ class GLOWCalculator(QWidget):
         # self.settings.setValue("laser_power", self.lsp_input.text())
         self.settings.setValue("gas_flow_rate", self.gfr_input.text())
         self.settings.setValue("waiting_time", self.wt_input.text())
+        self.settings.setValue("cooldown_intertracks", self.cdt_input.text())
+        self.settings.setValue("cooldown_interlayers", self.cdl_input.text())
+        self.settings.setValue("cooldown_interobjects", self.cdo_input.text())
+        self.settings.setValue("camera_exposure_time", self.camera_exposure.text())
+        self.settings.setValue("camera_start_delay", self.camera_delay.text())
+        self.settings.setValue("camera_sampling_interval", self.camera_interval.text())
         for k, v in self.mscode.items():
             self.settings.setValue(k, v)
         self.settings.setValue("fume_extractor", self.fe_input.text())
@@ -1504,55 +1800,54 @@ class FileDrop(QLabel):
             self.setText(f"File: {self.file_path.name}")
 
 
-app = QApplication(sys.argv)
-
-app.setStyleSheet(
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    app.setStyleSheet(
+        """
+        QWidget {
+            background-color: #ffffff;
+            color: #000000;
+            border: none;
+        }
+        QLabel {
+            color: #000000;
+        }
+        QPushButton {
+            background-color: #e0e0e0;
+            border: 1px solid #d0d0d0;
+            border-radius: 4px;
+            color: #000000;
+        }
+        QPushButton:hover {
+            background-color: #d0d0d0;
+            color: #000000;
+        }
+        QLineEdit {
+            background-color: #f0f0f0;
+            border-bottom: 1px solid #b0b0b0;
+            color: #000000  ;        
+        }
+        QCheckBox {
+            background-color: #ffffff;
+            color: #000000;          
+        }
+        QComboBox {
+            background-color: #f0f0f0;  
+            border-bottom: 1px solid #b0b0b0;
+            border-right: 1px solid #c0c0c0;
+            color: #000000;        
+        }
+        QComboBox:hover {
+            background-color: #e0e0e0;
+            color: #000000;          
+        }            
+        QListWidget {
+            font-size: 12px;
+            background-color: #c9cac9;
+            color: #000000;
+        }
     """
-    QWidget {
-        background-color: #ffffff;
-        color: #000000;
-        border: none;
-    }
-    QLabel {
-        color: #000000;
-    }
-    QPushButton {
-        background-color: #e0e0e0;
-        border: 1px solid #d0d0d0;
-        border-radius: 4px;
-        color: #000000;
-    }
-    QPushButton:hover {
-        background-color: #d0d0d0;
-        color: #000000;
-    }
-    QLineEdit {
-        background-color: #f0f0f0;
-        border-bottom: 1px solid #b0b0b0;
-        color: #000000  ;        
-    }
-    QCheckBox {
-        background-color: #ffffff;
-        color: #000000;          
-    }
-    QComboBox {
-        background-color: #f0f0f0;  
-        border-bottom: 1px solid #b0b0b0;
-        border-right: 1px solid #c0c0c0;
-        color: #000000;        
-    }
-    QComboBox:hover {
-        background-color: #e0e0e0;
-        color: #000000;          
-    }            
-    QListWidget {
-        font-size: 12px;
-        background-color: #c9cac9;
-        color: #000000;
-    }
-"""
-)
-
-window = MainWindow()
-window.show()
-sys.exit(app.exec())
+    )
+    window = MainWindow()
+    window.show()
+    sys.exit(app.exec())

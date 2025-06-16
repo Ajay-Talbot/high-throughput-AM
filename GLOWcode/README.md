@@ -23,7 +23,7 @@ Obs.: at least one rpm column must be on the CSV file.
 
 Obs.: if `width` or `height` is missing and it is required for the G-Code, the Machine Learning model will be used to predict it.
 
-### Using ML model prediction
+### Use ML model prediction
 This option allows users to use a trained (in single powder prints) Machine Learning model to predict the width and height of the tracks.
 
 Whenever the ML model is used, a new CSV file will be created in the same folder as the original CSV file.
@@ -81,6 +81,14 @@ The interface has both graphical and text displays, that allow user to view curr
  - `Not printing speed` : is the speed used to move the nozzle when not printing, in mm/min;
  - `Gas flow rate` : is the flow rate of the gas used to feed the powder, in L/min;
  - `Waiting time after feed rate change` : is the time required to steady the feed rate, in s;
+ - `Cooldown intertracks` : is the cooldown between printing tracks in a Cube's layer, in s;
+ - `Cooldown interlayers` : is the cooldown between printing layers in Thin Wall and Cube, in s;
+ - `Cooldown interobjects` : is the cooldown between printing the objects, in s;
+ - `Use camera` : enables image capturing during printing;
+    - `Camera exposure time` : is the time following the camera start, after which it will stop;
+    - `Camera start delay` : is the delay itt takes the camera to record after it starts;
+    - `Camera sampling interval`  : is the interval between image capturing;
+    - machine specific codes to turn on/off and start the camera;
 
 ### Machine Specific Code
  - indices: are the number by which the machine refers to each component;
