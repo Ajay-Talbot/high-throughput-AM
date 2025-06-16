@@ -1009,8 +1009,8 @@ class GLOWCalculator(QWidget):
             if not valid:
                 return None
 
-            ml_w = ("width" not in csv_data or self.use_ml) and shape == "Cube"
-            ml_h = ("height" not in csv_data or self.use_ml) and shape != "Single Track"
+            ml_w = ("width" not in csv_data or self.use_ml.isChecked()) and shape == "Cube"
+            ml_h = ("height" not in csv_data or self.use_ml.isChecked()) and shape != "Single Track"
 
             if ml_w or ml_h:
                 width_data = []
@@ -1032,11 +1032,12 @@ class GLOWCalculator(QWidget):
                 csv_path = self.filedrop.file_path.parent / (
                     self.filedrop.file_path.stem + "_with_ML_data.csv"
                 )
+                final_path = csv_path
                 i = 1
-                while csv_path.exists():
-                    csv_path = csv_path.parent / (str(csv_path.stem) + f" ({i}).csv")
+                while final_path.exists():
+                    final_path = csv_path.parent / (str(csv_path.stem) + f" ({i}).csv")
                     i += 1
-                csv_data.to_csv(csv_path, index=False)
+                csv_data.to_csv(final_path, index=False)
 
             self.positions.sort(key=lambda pos: (pos[1], pos[0]))
 
