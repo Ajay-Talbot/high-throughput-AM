@@ -1328,13 +1328,13 @@ class GLOWCalculator(QWidget):
 
     def strike_gcode(
         self,
-        initial_pos: tuple[float, ...],
-        strike_data: tuple[float, ...],
+        initial_pos: tuple[float, float, float],
+        strike_data: tuple[float, float],
         strike_size: float,
         strike_direction: str,
         layer: int,
         track: int,
-    ):
+    ) -> None:
         p_ls, ss_ls = strike_data
         self.gcode.append("\n")
         # if (abs(initial_pos[0] - self.position[0]) >= (hs_opt_ls * w_ls)
